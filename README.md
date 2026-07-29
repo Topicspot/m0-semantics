@@ -3,7 +3,7 @@
 **English** · [Русский](docs/README.ru.md) · [简体中文](docs/README.zh-CN.md) · [Español](docs/README.es.md) · [Português](docs/README.pt-BR.md)
 
 [![verify](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml/badge.svg)](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21680072.svg)](https://doi.org/10.5281/zenodo.21680072)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21680072-blue.svg)](https://doi.org/10.5281/zenodo.21680072)
 
 M₀ is a small formal model of *state that stays part of the protocol while the schedule does
 not*. It targets systems where a replayed run must produce byte-identical observable output:
