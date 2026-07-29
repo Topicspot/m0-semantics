@@ -23,6 +23,14 @@ Phases:
   the frame corollary — inside a legal wave the entry-state barrier is redundant, because the
   footprints are disjoint.
 - **C** — adversarial fuzzing: hostile snapshots, abort storms, artificial delays.
+- **D** (`d` / `crash`) — crash-stop runs, mirroring `Lemma5.lean`. The optimistic machine
+  halts between transactions at a random point, the wavefront machine at a random wave
+  barrier. Per run it checks the four L5 laws: `forcedPrefix` (the projection is a prefix of
+  the journal), `refines` (the result equals `Seq` of the consumed prefix), the observable
+  prefix law (the emit stream is a prefix of the reference — a crash may truncate output,
+  never fabricate it), and recovery factorization (`Seq` of the remaining journal, resumed
+  from the crash state, lands exactly on `Seq(P, J)`). Phase-local coverage requires crashes
+  at zero, mid-journal, at the very end, and at a wave barrier, or the phase fails.
 - **neg** — intentionally broken substrates, listed below.
 
 ## Negative suite
@@ -32,6 +40,8 @@ Phases:
 | `wrong_order` — commit order deviates from the journal | always | 100% |
 | `schedule_counter` — abort count leaks into the observable | always | 100% |
 | `wave_illegal_partition` — two conflicting transactions fused into one wave | always | 100% |
+| `crash_emit_after_halt` — a crashed run emits a value it never computed (the sneaky variant: the *correct* next reference value, invisible to the prefix law alone) | always | 100% |
+| `crash_torn_commit` — a crash lands inside a commit: part of the next write set applied without consuming the journal | always | 100% |
 | `no_validation` — hostile snapshots committed without validation | at least once | ~48% |
 | `wave_no_barrier` — racing on shared cells with no wave-entry state | at least once | ~4% |
 | `wave_emit_worker_order` — emits merged in physical, not journal, order | at least once | ~9% |

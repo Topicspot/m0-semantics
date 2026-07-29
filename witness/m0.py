@@ -23,11 +23,21 @@ Phases (reviewer's fixed development order):
        abort rates, random wave partitions, random worker permutations
        (physical execution order inside a wave), artificial delays
        (modelled as extra attempt events).
+    D  crash-stop runs (mirrors Lemma5.lean / FailSoundSubstrate):
+       both machines halt at random points mid-journal; checks per run:
+           forcedPrefix : proj(run) is a prefix of J
+           refines      : result == Seq(P, consumed prefix)
+           obs prefix   : emit stream is a prefix of the reference
+                          (no fabricated observations)
+           recovery     : Seq of the remainder from the crash state
+                          lands on Seq(P,J) (factorization of
+                          fail_substrate_independence)
     N  negative mode: intentionally broken substrates must be CAUGHT
        by the checker — wrong commit order, missing validation,
        scheduleCounter, an illegal wave partition, a wavefront without
-       the entry-state barrier, and two further schedule leaks
-       (physical worker position, wave index).
+       the entry-state barrier, two further schedule leaks (physical
+       worker position, wave index), and two crash breakages
+       (a fabricated post-halt emit, a torn commit).
 
 Every run reports structural coverage and replay statistics, so an
 "0 discrepancies" line can be read together with the evidence that the
@@ -35,7 +45,8 @@ generated cases actually exercised the machinery.  `--manifest FILE`
 writes seeds, counts, coverage and results as JSON for reproduction.
 
 The language, the instrumented semantics and both machines mirror
-Lemma4.lean §0–§6 definition-for-definition (same names in comments).
+Lemma4.lean §0–§6 definition-for-definition (same names in comments);
+phase D mirrors Lemma5.lean.
 Q := Nat, oracle E q t := (q*7 + t) - 3, matching the emitted Lean.
 """
 
@@ -642,12 +653,98 @@ def phase_bc(n, seed, hostility, delay_rate, label, stats=None):
 
 
 # ----------------------------------------------------------------------
+# Phase D — crash-stop runs (mirrors Lemma5 / FailSoundSubstrate)
+# ----------------------------------------------------------------------
+
+def is_prefix(a: list, b: list) -> bool:
+    return a == b[:len(a)]
+
+
+def check_crash(P, J, s0, consumed, s, o, proj) -> list:
+    """The four L5 checks for a crashed run that consumed `consumed`
+    (a candidate prefix of J) and finished in (s, o) with semantic
+    projection `proj`:
+      forcedPrefix  — proj is a prefix of J;
+      refines       — (s, o) == Seq(P, consumed prefix);
+      fail_observable_prefix — o is a prefix of the reference emit
+                      stream (no fabricated observations);
+      recovery factorization — Seq of the remaining journal, resumed
+                      from the crash state, lands exactly on Seq(P, J)
+                      (clause (ii) of fail_substrate_independence).
+    """
+    errs = []
+    ref_s, ref_o = run_seq(P, dict(s0), [], J)
+    if not is_prefix(list(proj), list(J)):
+        errs.append("forcedPrefix: projection is not a prefix of J")
+        return errs  # the remaining checks presuppose a meaningful prefix
+    pre_s, pre_o = run_seq(P, dict(s0), [], list(consumed))
+    if o != pre_o or any(s.get(c, 0) != pre_s.get(c, 0) for c in CELLS):
+        errs.append("crash refines: result != Seq(consumed prefix)")
+    if not is_prefix(o, ref_o):
+        errs.append("observable prefix: crashed emit stream fabricates output")
+    rec_s, rec_o = run_seq(P, dict(s), list(o), list(J)[len(consumed):])
+    if rec_o != ref_o or any(rec_s.get(c, 0) != ref_s.get(c, 0) for c in CELLS):
+        errs.append("recovery factorization: crash state + Seq(remainder) != Seq(P,J)")
+    return errs
+
+
+#: buckets phase D itself must reach, or the run proves nothing about L5
+CRASH_REQUIRED = ("crash:none", "crash:midway", "crash:full", "crash:wave_barrier")
+
+
+def phase_crash(n, seed, stats=None):
+    """Random crash points on both substrates.
+
+    Substrate 1 (optimistic): crash between transactions — the machine
+    stops consuming the journal after a random number of commits
+    (mirrors CrashRun: commits are atomic, `crash` is legal anywhere
+    between them).  Substrate 2 (wavefront): crash at a wave barrier —
+    a random prefix of the wave partition is executed.
+
+    Checked per case: forcedPrefix, refines(prefix), observable prefix
+    (no fabricated observations), recovery factorization.
+    """
+    rng = random.Random(seed)
+    bad = 0
+    for _ in range(n):
+        P, J, s0 = gen_case(rng)
+        if stats is not None:
+            for b in P.values():
+                stats.census_body(b)
+        # substrate 1: optimistic crash-stop between transactions
+        cut = rng.randint(0, len(J))
+        events, s, o = optimistic_run(P, s0, J[:cut], rng, hostility=0.5, stats=stats)
+        errs = check_crash(P, J, s0, J[:cut], s, o, sem_proj(events))
+        if stats is not None:
+            key = "crash:none" if cut == 0 else ("crash:full" if cut == len(J) else "crash:midway")
+            stats.hit(key)
+        # substrate 2: wavefront crash-stop at a wave barrier
+        waves = random_partition(P, J, rng)
+        k = rng.randint(0, len(waves))
+        consumed = [t for wv in waves[:k] for t in wv]
+        ws, wo = wavefront_run(P, s0, waves[:k], rng, stats)
+        errs += check_crash(P, J, s0, consumed, ws, wo, wave_proj(waves[:k]))
+        if stats is not None and 0 < k < len(waves):
+            stats.hit("crash:wave_barrier")
+        if errs:
+            bad += 1
+            print(f"  DISCREPANCY D: {errs}\n    P={P}\n    J={J}\n    cut={cut}\n    s0={s0}")
+    missing = [] if stats is None else [k for k in CRASH_REQUIRED if not stats.cov[k]]
+    if missing:
+        print(f"Phase D: UNREACHED crash buckets {missing} — the run proves nothing about them")
+        bad += 1
+    print(f"Phase D (crash): {n} cases, {bad} discrepancies")
+    return bad
+
+
+# ----------------------------------------------------------------------
 # Negative mode: broken substrates must be caught
 # ----------------------------------------------------------------------
 
 #: broken substrates that MUST be caught every single time — a rate below
 #: 100% here is a hole in the checker, not a property of the model.
-ALWAYS_CAUGHT = ("wrong_order", "schedule_counter", "wave_illegal_partition")
+ALWAYS_CAUGHT = ("wrong_order", "schedule_counter", "wave_illegal_partition",
+                 "crash_emit_after_halt", "crash_torn_commit")
 
 
 def negative_mode(n, seed, cov=None):
@@ -659,7 +756,8 @@ def negative_mode(n, seed, cov=None):
     stats = {k: [0, 0] for k in
              ("wrong_order", "no_validation", "schedule_counter",
               "wave_illegal_partition", "wave_no_barrier", "wave_emit_worker_order",
-              "worker_id_leak", "partition_id_leak")}
+              "worker_id_leak", "partition_id_leak",
+              "crash_emit_after_halt", "crash_torn_commit")}
 
     def record(name, caught):
         stats[name][0] += 1
@@ -731,6 +829,31 @@ def negative_mode(n, seed, cov=None):
         ws, wo = wavefront_run(P, s0, waves, rng, break_mode="partition_leak")
         record("partition_id_leak", check_wavefront(P, J, s0, waves, ws, wo, ref_s, ref_o))
 
+        # 9. fabricated observation after a crash: the substrate halts
+        #    mid-journal but emits one value it never computed.  The
+        #    sneakiest fabrication is the CORRECT next reference value —
+        #    the prefix law alone cannot see it, only `refines` against
+        #    Seq(consumed prefix) can; past the end of the reference
+        #    stream any extra value breaks the prefix law itself.
+        cut = rng.randint(0, len(J))
+        events, s, o = optimistic_run(P, s0, J[:cut], rng, 0.3)
+        fabricated = ref_o[len(o)] if len(o) < len(ref_o) else 7
+        record("crash_emit_after_halt",
+               check_crash(P, J, s0, J[:cut], s, o + [fabricated], sem_proj(events)))
+
+        # 10. torn commit: the crash lands "inside" a commit — part of the
+        #     next transaction's write set is applied without the journal
+        #     being consumed.  Atomicity of commit w.r.t. crash is exactly
+        #     what CrashRun promises, so this must be caught.
+        if cut < len(J):
+            t_next = J[cut]
+            w, _, _ = run_tx(t_next, dict(s), P[t_next])
+            torn = next(((c, v) for c, v in w.items() if s.get(c, 0) != v), None)
+            if torn is not None:
+                s_bad = apply_w(s, {torn[0]: torn[1]})
+                record("crash_torn_commit",
+                       check_crash(P, J, s0, J[:cut], s_bad, o, sem_proj(events)))
+
     ok = True
     for name, (total, caught) in stats.items():
         rate = 100.0 * caught / max(total, 1)
@@ -762,11 +885,13 @@ def lean_version() -> str | None:
 
 def main():
     ap = argparse.ArgumentParser(description="M₀ differential witness")
-    ap.add_argument("phase", choices=["a", "b", "c", "neg", "all"], nargs="?", default="all")
+    ap.add_argument("phase", choices=["a", "b", "c", "d", "crash", "neg", "all"],
+                    nargs="?", default="all")
     ap.add_argument("--seed", type=int, default=2026)
     ap.add_argument("--n-a", type=int, default=40)
     ap.add_argument("--n-b", type=int, default=3000)
     ap.add_argument("--n-c", type=int, default=3000)
+    ap.add_argument("--n-d", type=int, default=2000)
     ap.add_argument("--n-neg", type=int, default=400)
     ap.add_argument("--manifest", metavar="FILE",
                     help="write seeds, counts, coverage and results as JSON")
@@ -792,13 +917,18 @@ def main():
             args.n_c, args.seed + 2, hostility=0.85, delay_rate=0.4,
             label="C (adversarial)", stats=stats)
         failures += results["phase_c_discrepancies"]
+    if args.phase in ("d", "crash", "all"):
+        results["phase_d_discrepancies"] = phase_crash(args.n_d, args.seed + 4, stats=stats)
+        failures += results["phase_d_discrepancies"]
     if args.phase in ("neg", "all"):
         results["negative_failures"] = negative_mode(args.n_neg, args.seed + 3, extra)
         failures += results["negative_failures"]
 
     if stats.cov:
         print(stats.report())
-        missing = stats.missing()
+        # the global REQUIRED buckets are populated by phases B/C; a
+        # standalone phase D run is gated by CRASH_REQUIRED instead
+        missing = stats.missing() if args.phase in ("b", "c", "all") else []
         if missing:
             print("  UNREACHED (the run proves nothing about these): " + ", ".join(missing))
             if not args.no_coverage_gate:
@@ -813,8 +943,10 @@ def main():
             "platform": platform.platform(),
             "lean": lean_version(),
             "seeds": {"base": args.seed, "phase_a": args.seed, "phase_b": args.seed + 1,
-                      "phase_c": args.seed + 2, "negative": args.seed + 3},
-            "counts": {"a": args.n_a, "b": args.n_b, "c": args.n_c, "neg": args.n_neg},
+                      "phase_c": args.seed + 2, "negative": args.seed + 3,
+                      "phase_d": args.seed + 4},
+            "counts": {"a": args.n_a, "b": args.n_b, "c": args.n_c, "d": args.n_d,
+                       "neg": args.n_neg},
             "phase": args.phase,
             "results": results,
             "passed": failures == 0,
