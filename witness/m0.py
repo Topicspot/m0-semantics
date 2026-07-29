@@ -23,9 +23,16 @@ Phases (reviewer's fixed development order):
        abort rates, random wave partitions, random worker permutations
        (physical execution order inside a wave), artificial delays
        (modelled as extra attempt events).
-    N  negative mode: intentionally broken substrates
-       (wrong commit order / missing validation / scheduleCounter
-       observable injection) must be CAUGHT by the checker.
+    N  negative mode: intentionally broken substrates must be CAUGHT
+       by the checker — wrong commit order, missing validation,
+       scheduleCounter, an illegal wave partition, a wavefront without
+       the entry-state barrier, and two further schedule leaks
+       (physical worker position, wave index).
+
+Every run reports structural coverage and replay statistics, so an
+"0 discrepancies" line can be read together with the evidence that the
+generated cases actually exercised the machinery.  `--manifest FILE`
+writes seeds, counts, coverage and results as JSON for reproduction.
 
 The language, the instrumented semantics and both machines mirror
 Lemma4.lean §0–§6 definition-for-definition (same names in comments).
@@ -33,11 +40,15 @@ Q := Nat, oracle E q t := (q*7 + t) - 3, matching the emitted Lean.
 """
 
 import argparse
+import json
+import platform
 import random
 import re
 import subprocess
 import sys
 import tempfile
+import time
+from collections import Counter
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -54,6 +65,95 @@ RHO0_DEFAULT = 0           # ρ₀ = fun _ => 0
 def E_oracle(q: int, t: int) -> int:
     """E : Q → TxId → Int, mirrored verbatim in the emitted Lean."""
     return q * 7 + t - 3
+
+
+# ----------------------------------------------------------------------
+# Coverage and replay statistics
+# ----------------------------------------------------------------------
+
+class Stats:
+    """Structural coverage plus replay statistics.
+
+    Coverage answers "did the generated cases actually reach the
+    interesting states?".  A green run with an empty bucket is not
+    evidence, so `required` buckets make the run fail when never hit.
+    """
+
+    REQUIRED = [
+        "instr:read", "instr:write", "instr:emit", "instr:ite", "instr:ext",
+        "case:repeated_tx", "case:aborted", "case:read_own_write",
+        "case:empty_readset", "case:multi_wave", "case:parallel_wave",
+        "case:hostile_commit", "case:emitting",
+    ]
+
+    def __init__(self) -> None:
+        self.cov: Counter[str] = Counter()
+        self.attempts: list[int] = []       # attempts per committed transaction
+        self.wave_sizes: Counter[int] = Counter()
+        self.readset_sizes: list[int] = []
+        self.events = 0
+        self.commits = 0
+
+    def hit(self, key: str, n: int = 1) -> None:
+        self.cov[key] += n
+
+    def census_body(self, b) -> None:
+        stack = [b]
+        while stack:
+            n = stack.pop()
+            tag = n[0]
+            if tag == "done":
+                continue
+            self.hit(f"instr:{tag}")
+            if tag in ("read", "write", "ext"):
+                stack.append(n[3])
+            elif tag == "emit":
+                stack.append(n[2])
+            elif tag == "ite":
+                stack.extend([n[2], n[3]])
+
+    def missing(self) -> list[str]:
+        return [k for k in self.REQUIRED if not self.cov[k]]
+
+    def report(self, indent: str = "  ") -> str:
+        lines = ["Coverage:"]
+        for k in sorted(self.cov):
+            lines.append(f"{indent}{k:<26} {self.cov[k]}")
+        if self.attempts:
+            n = len(self.attempts)
+            retried = sum(1 for a in self.attempts if a > 1)
+            lines.append("Replay statistics:")
+            lines.append(f"{indent}{'committed transactions':<26} {n}")
+            lines.append(f"{indent}{'attempts per commit (avg)':<26} {sum(self.attempts)/n:.2f}")
+            lines.append(f"{indent}{'attempts per commit (max)':<26} {max(self.attempts)}")
+            lines.append(f"{indent}{'commits needing a retry':<26} "
+                         f"{retried} ({100.0*retried/n:.1f}%)")
+            lines.append(f"{indent}{'trace events replayed':<26} {self.events}")
+        if self.readset_sizes:
+            rs = self.readset_sizes
+            lines.append(f"{indent}{'read-set size (avg / max)':<26} "
+                         f"{sum(rs)/len(rs):.2f} / {max(rs)}")
+        if self.wave_sizes:
+            hist = " ".join(f"{k}:{v}" for k, v in sorted(self.wave_sizes.items()))
+            lines.append(f"{indent}{'wave size histogram':<26} {hist}")
+        return "\n".join(lines)
+
+    def as_dict(self) -> dict:
+        d = {"coverage": dict(sorted(self.cov.items())),
+             "wave_sizes": {str(k): v for k, v in sorted(self.wave_sizes.items())},
+             "trace_events": self.events, "commits": self.commits}
+        if self.attempts:
+            d["attempts_per_commit"] = {
+                "avg": round(sum(self.attempts) / len(self.attempts), 4),
+                "max": max(self.attempts),
+                "retried": sum(1 for a in self.attempts if a > 1),
+            }
+        if self.readset_sizes:
+            d["readset_size"] = {
+                "avg": round(sum(self.readset_sizes) / len(self.readset_sizes), 4),
+                "max": max(self.readset_sizes),
+            }
+        return d
 
 
 # ----------------------------------------------------------------------
@@ -116,7 +216,7 @@ def run_seq(P: dict, s: dict, o: list, J: list) -> tuple:
 # §1  Instrumented semantics (mirrors runInstr / runTx / validates)
 # ----------------------------------------------------------------------
 
-def run_instr(t: int, sigma: dict, w: dict, rho: dict, o: list, rs: list, b):
+def run_instr(t: int, sigma: dict, w: dict, rho: dict, o: list, rs: list, b, stats=None):
     while True:
         tag = b[0]
         if tag == "done":
@@ -124,6 +224,8 @@ def run_instr(t: int, sigma: dict, w: dict, rho: dict, o: list, rs: list, b):
         if tag == "read":
             _, c, x, k = b
             if c in w:                      # read-your-own-writes
+                if stats is not None:
+                    stats.hit("case:read_own_write")
                 rho = {**rho, x: w[c]}
             else:
                 v = sigma.get(c, 0)
@@ -149,9 +251,14 @@ def run_instr(t: int, sigma: dict, w: dict, rho: dict, o: list, rs: list, b):
             raise ValueError(tag)
 
 
-def run_tx(t: int, sigma: dict, b):
+def run_tx(t: int, sigma: dict, b, stats=None):
     """runTx: instrumented run from empty writes/env/out/readset."""
-    return run_instr(t, sigma, {}, {}, [], [], b)
+    w, o, rs = run_instr(t, sigma, {}, {}, [], [], b, stats)
+    if stats is not None:
+        stats.readset_sizes.append(len(rs))
+        if not rs:
+            stats.hit("case:empty_readset")
+    return w, o, rs
 
 
 def validates(S: dict, rs: list) -> bool:
@@ -175,7 +282,7 @@ def perturb(s: dict, rng: random.Random, hostility: float) -> dict:
     return sigma
 
 
-def optimistic_run(P, s0, J, rng, hostility=0.3, max_attempts=25, delay_rate=0.0):
+def optimistic_run(P, s0, J, rng, hostility=0.3, max_attempts=25, delay_rate=0.0, stats=None):
     """Speculate with hostile snapshots; abort on validation failure;
     ordered commit.  Returns (events, state, out).  delay_rate injects
     extra attempt events (artificial delays are trace no-ops)."""
@@ -188,12 +295,22 @@ def optimistic_run(P, s0, J, rng, hostility=0.3, max_attempts=25, delay_rate=0.0
             attempts += 1
             # after too many hostile failures, take an honest snapshot
             sigma = dict(s) if attempts > max_attempts else perturb(s, rng, hostility)
-            w, out, rs = run_tx(t, sigma, P[t])
+            w, out, rs = run_tx(t, sigma, P[t], stats)
             if validates(s, rs):
                 events.append(("commit", t, sigma))
+                if stats is not None:
+                    stats.attempts.append(attempts)
+                    stats.commits += 1
+                    if attempts > 1:
+                        stats.hit("case:aborted")
+                    if any(sigma.get(c, 0) != s.get(c, 0) for c in CELLS):
+                        # committed from a snapshot that was never the real state
+                        stats.hit("case:hostile_commit")
                 s, o = apply_w(s, w), o + out
                 break
             events.append(("attempt", t, sigma))
+    if stats is not None:
+        stats.events += len(events)
     return events, s, o
 
 
@@ -269,23 +386,49 @@ def random_partition(P, J, rng):
     return waves
 
 
-def wavefront_run(P, s0, waves, rng=None):
+def wavefront_run(P, s0, waves, rng=None, stats=None, break_mode=None):
     """WaveRun: each wave executes against the FIXED wave-entry state;
     barrier merge in journal order; emits concatenated in journal
     order.  Physical execution order inside a wave is randomly
-    permuted (worker permutation) — it must not matter."""
+    permuted (worker permutation) — it must not matter.
+
+    break_mode deliberately violates one rule at a time, for the
+    negative suite:
+        "no_barrier"    — transactions in a wave see each other's writes,
+                          in physical (shuffled) order instead of the
+                          fixed wave-entry state ("no_barrier_illegal"
+                          does the same on a deliberately illegal wave)
+        "emit_worker"   — emits concatenated in physical order
+        "worker_leak"   — the physical position of a transaction inside
+                          its wave leaks into the emitted values
+        "partition_leak"— the wave index leaks into the emitted values
+    """
     s, o = dict(s0), []
-    for ts in waves:
-        assert wave_ok(P, ts)
+    for wi, ts in enumerate(waves):
+        if break_mode not in ("illegal_partition", "no_barrier_illegal"):
+            assert wave_ok(P, ts), "illegal wave passed to wavefront_run"
+        if stats is not None:
+            stats.wave_sizes[len(ts)] += 1
         S0 = dict(s)
         order = list(range(len(ts)))
         if rng is not None:
             rng.shuffle(order)             # random worker order
         results = {}
-        for i in order:                    # physical order: shuffled
+        live = dict(s)                     # only used by "no_barrier"
+        for pos, i in enumerate(order):    # physical order: shuffled
             t = ts[i]
-            results[i] = run_tx(t, S0, P[t])
-        for i in range(len(ts)):           # barrier merge: journal order
+            if break_mode in ("no_barrier", "no_barrier_illegal"):
+                w, out, rs = run_tx(t, live, P[t], stats)
+                live = apply_w(live, w)
+            else:
+                w, out, rs = run_tx(t, S0, P[t], stats)
+            if break_mode == "worker_leak":
+                out = [v + pos for v in out]
+            elif break_mode == "partition_leak":
+                out = [v + wi for v in out]
+            results[i] = (w, out, rs)
+        merge = order if break_mode == "emit_worker" else range(len(ts))
+        for i in merge:                    # barrier merge: journal order
             w, out, _rs = results[i]
             s = apply_w(s, w)
             o = o + out
@@ -426,27 +569,70 @@ def check_optimistic(P, J, s0, events, s, o) -> list:
     return errs
 
 
-def phase_bc(n, seed, hostility, delay_rate, label):
+def check_wavefront(P, J, s0, waves, ws, wo, ref_s, ref_o) -> list:
+    """Independent admissibility replay of WaveOk/WaveRun plus the two
+    substrate laws.  Mirrors check_optimistic for substrate 2."""
+    errs = []
+    if wave_proj(waves) != list(J):
+        errs.append("wavefront forced: waveProj != J")
+    for ts in waves:
+        if not wave_ok(P, ts):
+            errs.append(f"illegal wave: overlapping footprints in {ts}")
+            break
+    if wo != ref_o:
+        errs.append("wavefront observable: emit != reference emit")
+    if any(ws.get(c, 0) != ref_s.get(c, 0) for c in CELLS):
+        errs.append("wavefront sound: state != Seq(P,J)")
+    return errs
+
+
+def merge_conflicting_waves(P, waves):
+    """Fuse the first pair of adjacent waves whose union is illegal.
+    Returns None when the case offers no conflict to exploit."""
+    for i in range(len(waves) - 1):
+        fused = waves[i] + waves[i + 1]
+        if not wave_ok(P, fused):
+            return waves[:i] + [fused] + waves[i + 2:]
+    return None
+
+
+def phase_bc(n, seed, hostility, delay_rate, label, stats=None):
     rng = random.Random(seed)
     bad = aborts = waves_total = 0
     for _ in range(n):
         P, J, s0 = gen_case(rng)
+        if stats is not None:
+            for b in P.values():
+                stats.census_body(b)
+            if len(set(J)) < len(J):
+                stats.hit("case:repeated_tx")
         # substrate 1: optimistic
-        events, s, o = optimistic_run(P, s0, J, rng, hostility, delay_rate=delay_rate)
+        events, s, o = optimistic_run(P, s0, J, rng, hostility,
+                                      delay_rate=delay_rate, stats=stats)
         errs = check_optimistic(P, J, s0, events, s, o)
         aborts += abort_count(events)
         # substrate 2: wavefront with random partition + worker permutation
         waves = random_partition(P, J, rng)
         waves_total += len(waves)
-        ws, wo = wavefront_run(P, s0, waves, rng)
+        ws, wo = wavefront_run(P, s0, waves, rng, stats)
         ref_s, ref_o = run_seq(P, dict(s0), [], J)
-        if wave_proj(waves) != list(J):
-            errs.append("wavefront forced: waveProj != J")
-        if wo != ref_o or any(ws.get(c, 0) != ref_s.get(c, 0) for c in CELLS):
-            errs.append("wavefront sound: result != Seq(P,J)")
+        errs += check_wavefront(P, J, s0, waves, ws, wo, ref_s, ref_o)
+        # frame corollary: inside a legal wave the footprints are disjoint, so
+        # dropping the wave-entry barrier must be invisible.  If this ever
+        # differs, either WaveOk or the frame theorem is mis-transcribed.
+        ns, no_ = wavefront_run(P, s0, waves, rng, break_mode="no_barrier")
+        if no_ != ref_o or any(ns.get(c, 0) != ref_s.get(c, 0) for c in CELLS):
+            errs.append("frame: barrier-free wave run != Seq(P,J) on a legal partition")
         # cross-substrate: both machines, same (P,J) → same Result
         if wo != o or any(ws.get(c, 0) != s.get(c, 0) for c in CELLS):
             errs.append("cross-substrate: optimistic != wavefront")
+        if stats is not None:
+            if len(waves) > 1:
+                stats.hit("case:multi_wave")
+            if any(len(w) > 1 for w in waves):
+                stats.hit("case:parallel_wave")
+            if ref_o:
+                stats.hit("case:emitting")
         if errs:
             bad += 1
             print(f"  DISCREPANCY {label}: {errs}\n    P={P}\n    J={J}\n    s0={s0}")
@@ -459,12 +645,30 @@ def phase_bc(n, seed, hostility, delay_rate, label):
 # Negative mode: broken substrates must be caught
 # ----------------------------------------------------------------------
 
-def negative_mode(n, seed):
+#: broken substrates that MUST be caught every single time — a rate below
+#: 100% here is a hole in the checker, not a property of the model.
+ALWAYS_CAUGHT = ("wrong_order", "schedule_counter", "wave_illegal_partition")
+
+
+def negative_mode(n, seed, cov=None):
+    """Every entry is an intentionally broken substrate.  Some breakages
+    are invisible in the observable for some cases — that is exactly the
+    observable-coincidence layer of L3.5, so those only have to be caught
+    at least once, while the structural ones must be caught always."""
     rng = random.Random(seed)
-    stats = {"wrong_order": [0, 0], "no_validation": [0, 0], "schedule_counter": [0, 0]}
+    stats = {k: [0, 0] for k in
+             ("wrong_order", "no_validation", "schedule_counter",
+              "wave_illegal_partition", "wave_no_barrier", "wave_emit_worker_order",
+              "worker_id_leak", "partition_id_leak")}
+
+    def record(name, caught):
+        stats[name][0] += 1
+        stats[name][1] += bool(caught)
 
     for _ in range(n):
         P, J, s0 = gen_case(rng)
+        ref_s, ref_o = run_seq(P, dict(s0), [], J)
+        waves = random_partition(P, J, rng)
 
         # 1. wrong commit order: swap two adjacent distinct journal entries
         idx = [i for i in range(len(J) - 1) if J[i] != J[i + 1]]
@@ -473,8 +677,7 @@ def negative_mode(n, seed):
             J_bad = list(J); J_bad[i], J_bad[i + 1] = J_bad[i + 1], J_bad[i]
             events, s, o = optimistic_run(P, s0, J_bad, rng, 0.0)
             errs = check_optimistic(P, J, s0, events, s, o)  # checked against TRUE J
-            stats["wrong_order"][0] += 1
-            stats["wrong_order"][1] += bool(errs)
+            record("wrong_order", errs)
 
         # 2. missing validation: commit hostile snapshots unconditionally
         s, o, events = dict(s0), [], []
@@ -484,30 +687,78 @@ def negative_mode(n, seed):
             events.append(("commit", t, sigma))          # no validates() check!
             s, o = apply_w(s, w), o + out
         errs = check_optimistic(P, J, s0, events, s, o)
-        stats["no_validation"][0] += 1
-        stats["no_validation"][1] += bool(errs)
+        record("no_validation", errs)
 
         # 3. scheduleCounter: leak abort count into the observable
         events, s, o = optimistic_run(P, s0, J, rng, 0.8)
         o_leaky = o + [abort_count(events)]
         errs = check_optimistic(P, J, s0, events, s, o_leaky)
-        stats["schedule_counter"][0] += 1
-        stats["schedule_counter"][1] += bool(errs)
+        record("schedule_counter", errs)
+
+        # 4. illegal wave partition: fuse two waves with overlapping
+        #    footprints — WaveOk is violated, the checker must say so
+        bad_waves = merge_conflicting_waves(P, waves)
+        if bad_waves is not None:
+            ws, wo = wavefront_run(P, s0, bad_waves, rng, break_mode="illegal_partition")
+            errs = check_wavefront(P, J, s0, bad_waves, ws, wo, ref_s, ref_o)
+            record("wave_illegal_partition", errs)
+
+        # 5. no barrier, on a wave that should never have been formed: the
+        #    transactions now race on shared cells in physical order.  Checked
+        #    on the result alone, so the catch is not just "illegal partition".
+        if bad_waves is not None:
+            # a race need not show up under one physical order, so look a few
+            # times before declaring the breakage invisible
+            diverged = False
+            for _ in range(4):
+                ws, wo = wavefront_run(P, s0, bad_waves, rng,
+                                       break_mode="no_barrier_illegal")
+                diverged = diverged or wo != ref_o or any(
+                    ws.get(c, 0) != ref_s.get(c, 0) for c in CELLS)
+            record("wave_no_barrier", diverged)
+
+        # 6. emits merged in physical order instead of journal order
+        ws, wo = wavefront_run(P, s0, waves, rng, break_mode="emit_worker")
+        record("wave_emit_worker_order",
+               check_wavefront(P, J, s0, waves, ws, wo, ref_s, ref_o))
+
+        # 7. worker-id leak: the physical position inside the wave reaches
+        #    the emitted values
+        ws, wo = wavefront_run(P, s0, waves, rng, break_mode="worker_leak")
+        record("worker_id_leak", check_wavefront(P, J, s0, waves, ws, wo, ref_s, ref_o))
+
+        # 8. partition-id leak: the wave index reaches the emitted values
+        ws, wo = wavefront_run(P, s0, waves, rng, break_mode="partition_leak")
+        record("partition_id_leak", check_wavefront(P, J, s0, waves, ws, wo, ref_s, ref_o))
 
     ok = True
     for name, (total, caught) in stats.items():
         rate = 100.0 * caught / max(total, 1)
         print(f"Negative [{name}]: {caught}/{total} caught ({rate:.1f}%)")
-        # wrong_order / schedule_counter must essentially always be caught;
-        # no_validation may coincidentally agree when hostile reads are unused
-        if name in ("wrong_order", "schedule_counter") and caught < total:
-            ok = ok and (total - caught) == 0
-        if name == "no_validation" and caught == 0:
+        if total == 0:
+            print(f"  never exercised: {name}")
             ok = False
+        elif name in ALWAYS_CAUGHT:
+            if caught < total:
+                ok = False
+        elif caught == 0:
+            # a breakage invisible in every single case would mean the
+            # checker cannot see that dimension at all
+            ok = False
+    if cov is not None:
+        cov["negative"] = {k: {"total": v[0], "caught": v[1]} for k, v in stats.items()}
     return 0 if ok else 1
 
 
 # ----------------------------------------------------------------------
+
+def lean_version() -> str | None:
+    try:
+        r = subprocess.run(["lean", "--version"], capture_output=True, text=True, timeout=60)
+        return r.stdout.strip() or None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
 
 def main():
     ap = argparse.ArgumentParser(description="M₀ differential witness")
@@ -517,17 +768,61 @@ def main():
     ap.add_argument("--n-b", type=int, default=3000)
     ap.add_argument("--n-c", type=int, default=3000)
     ap.add_argument("--n-neg", type=int, default=400)
+    ap.add_argument("--manifest", metavar="FILE",
+                    help="write seeds, counts, coverage and results as JSON")
+    ap.add_argument("--no-coverage-gate", action="store_true",
+                    help="report coverage but do not fail on unreached buckets")
     args = ap.parse_args()
 
+    started = time.time()
+    stats = Stats()
+    extra: dict = {}
     failures = 0
+    results: dict = {}
+
     if args.phase in ("a", "all"):
-        failures += phase_a(args.n_a, args.seed)
+        results["phase_a_mismatches"] = phase_a(args.n_a, args.seed)
+        failures += results["phase_a_mismatches"]
     if args.phase in ("b", "all"):
-        failures += phase_bc(args.n_b, args.seed + 1, hostility=0.3, delay_rate=0.1, label="B")
+        results["phase_b_discrepancies"] = phase_bc(
+            args.n_b, args.seed + 1, hostility=0.3, delay_rate=0.1, label="B", stats=stats)
+        failures += results["phase_b_discrepancies"]
     if args.phase in ("c", "all"):
-        failures += phase_bc(args.n_c, args.seed + 2, hostility=0.85, delay_rate=0.4, label="C (adversarial)")
+        results["phase_c_discrepancies"] = phase_bc(
+            args.n_c, args.seed + 2, hostility=0.85, delay_rate=0.4,
+            label="C (adversarial)", stats=stats)
+        failures += results["phase_c_discrepancies"]
     if args.phase in ("neg", "all"):
-        failures += negative_mode(args.n_neg, args.seed + 3)
+        results["negative_failures"] = negative_mode(args.n_neg, args.seed + 3, extra)
+        failures += results["negative_failures"]
+
+    if stats.cov:
+        print(stats.report())
+        missing = stats.missing()
+        if missing:
+            print("  UNREACHED (the run proves nothing about these): " + ", ".join(missing))
+            if not args.no_coverage_gate:
+                failures += 1
+
+    if args.manifest:
+        manifest = {
+            "tool": "m0.py",
+            "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "duration_s": round(time.time() - started, 2),
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+            "lean": lean_version(),
+            "seeds": {"base": args.seed, "phase_a": args.seed, "phase_b": args.seed + 1,
+                      "phase_c": args.seed + 2, "negative": args.seed + 3},
+            "counts": {"a": args.n_a, "b": args.n_b, "c": args.n_c, "neg": args.n_neg},
+            "phase": args.phase,
+            "results": results,
+            "passed": failures == 0,
+            **stats.as_dict(),
+            **extra,
+        }
+        Path(args.manifest).write_text(json.dumps(manifest, indent=2, sort_keys=False) + "\n")
+        print(f"Manifest written to {args.manifest}")
 
     print("RESULT:", "ALL CHECKS PASSED" if failures == 0 else f"{failures} FAILURES")
     sys.exit(0 if failures == 0 else 1)

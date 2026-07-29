@@ -30,7 +30,7 @@ Lean 4.31 with `0 sorry`; the only axioms used are `propext` and `Quot.sound`, a
 | L3A / L3B | boundary of admissible extensions + `scheduleCounter` counterexample | proved |
 | L3.5 | semantic ⊊ observable ⊊ coincidence | proved |
 | L4 | substrate independence (`SoundSubstrate`, optimistic + wavefront instances) | proved |
-| witness | `m0.py`, 106 000 randomized cases, 0 discrepancies | runs |
+| witness | `m0.py`, 106 000 randomized cases, 0 discrepancies, 8 negative substrates | runs |
 
 All layers are mechanized and present in [`lean/`](lean/).
 
@@ -81,9 +81,13 @@ python witness/m0.py b --n-b 2000      # parallel substrates vs reference
 python witness/m0.py neg               # intentionally broken substrates must be caught
 ```
 
-Expected: Phase B reports `0 discrepancies`; negative mode catches `wrong_order` and
-`schedule_counter` in 100% of cases and `no_validation` in roughly half — the latter is not a
-bug but the empirical face of observable coincidence from L3.5.
+Expected: Phase B reports `0 discrepancies`; the negative suite catches the three structural
+breakages (`wrong_order`, `schedule_counter`, `wave_illegal_partition`) in 100% of cases, and
+the five observable-level ones — missing validation, a barrier-free race, emits in worker
+order, a worker-id leak, a partition-id leak — only part of the time. That is not a bug but
+the empirical face of observable coincidence from L3.5. Each run also reports structural
+coverage and replay statistics, and fails if a required coverage bucket was never reached; see
+[witness/README.md](witness/README.md).
 
 `python witness/m0.py a` additionally requires `lean` on `PATH`; it builds a harness on top of
 `lean/Lemma4.lean` and differentially compares the Python reference interpreter against

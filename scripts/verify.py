@@ -10,7 +10,9 @@ Checks, in order:
   3. the axiom footprint of every headline theorem equals what the project
      claims in lean/README.md — a proof that silently starts depending on a
      new axiom is a regression, not a detail.
-  4. `witness/m0.py`, the differential witness, unless --skip-witness.
+  4. `witness/m0.py`, the differential witness, unless --skip-witness. It writes
+     witness-manifest.json (seeds, counts, coverage, statistics) next to the repo
+     root so a run can be reproduced exactly.
 
 Usage:
     python scripts/verify.py                # everything
@@ -140,7 +142,7 @@ def check_axioms() -> list[str]:
 
 def check_witness(quick: bool) -> list[str]:
     step("witness")
-    args = ["python3", "witness/m0.py", "all"]
+    args = ["python3", "witness/m0.py", "all", "--manifest", "witness-manifest.json"]
     if quick:
         args += ["--n-a", "20", "--n-b", "300", "--n-c", "300", "--n-neg", "100"]
     r = run(args)

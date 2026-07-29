@@ -8,6 +8,7 @@ python m0.py b --n-b 3000      # parallel substrates vs reference
 python m0.py c --n-c 3000      # adversarial fuzzing (85% hostile snapshots)
 python m0.py neg               # broken substrates must be caught
 python m0.py all               # everything, including Phase A
+python m0.py all --manifest run.json   # reproducible record of the run
 ```
 
 Phases:
@@ -18,21 +19,60 @@ Phases:
 - **B** — parallel trace generator (attempt / snapshot / abort / commit) plus a wavefront
   generator with random partitions and random worker permutations. Per trace it checks
   `forced` (proj == J), `sound` (result == Seq(P,J)), `observable` (emit stream equals the
-  reference), independent replay of the admissibility rules, and cross-substrate agreement.
+  reference), independent replay of the admissibility rules, cross-substrate agreement, and
+  the frame corollary — inside a legal wave the entry-state barrier is redundant, because the
+  footprints are disjoint.
 - **C** — adversarial fuzzing: hostile snapshots, abort storms, artificial delays.
-- **neg** — intentionally broken substrates. `wrong_order` and `schedule_counter` must be
-  caught in 100% of cases; `no_validation` is caught roughly half the time, which is the
-  expected empirical face of observable coincidence (a corrupted cell that the body never
-  reads yields the same observable result).
+- **neg** — intentionally broken substrates, listed below.
 
-Recorded full run, two seeds: Phase A 100/100 agree, Phase B+C 106 000 cases with 0
-discrepancies and ~580 000 aborts, negative mode wrong order 1851/1851, scheduleCounter
-2400/2400, missing validation ~49.5%.
+## Negative suite
 
-Re-run after the recovery (Lean 4.31.0, seed 2026): Phase A 40/40, Phase B 3 000 cases and
-Phase C 3 000 cases with 0 discrepancies, `wrong_order` 317/317, `schedule_counter` 400/400,
-`no_validation` 198/400 (49.5%).
+| Breakage | Must be caught | Typical rate |
+| --- | --- | --- |
+| `wrong_order` — commit order deviates from the journal | always | 100% |
+| `schedule_counter` — abort count leaks into the observable | always | 100% |
+| `wave_illegal_partition` — two conflicting transactions fused into one wave | always | 100% |
+| `no_validation` — hostile snapshots committed without validation | at least once | ~48% |
+| `wave_no_barrier` — racing on shared cells with no wave-entry state | at least once | ~4% |
+| `wave_emit_worker_order` — emits merged in physical, not journal, order | at least once | ~9% |
+| `worker_id_leak` — physical position inside the wave reaches the emitted values | at least once | ~29% |
+| `partition_id_leak` — wave index reaches the emitted values | at least once | ~53% |
 
-Open review items, not yet done: coverage counters, a seed manifest in JSON, negative tests
-for wavefront rejection, and two or three more schedule-dependent leaks (worker id,
-partition) alongside `scheduleCounter`.
+The three structural breakages must be caught in 100% of cases; anything less is a hole in the
+checker. The rest are only required to be caught at least once, and the fact that they are
+*not* always caught is the empirical face of observable coincidence from L3.5: a broken
+substrate whose damage never reaches an emit is, for that case, observationally equivalent to
+the correct one. The rates are stable across seeds; a rate collapsing to 0 fails the run.
+
+## Coverage and statistics
+
+Every B/C run reports how much of the machinery the random cases actually reached: instruction
+census, cases with repeated transactions, aborted transactions, read-your-own-write,
+empty read-sets, multi-wave partitions, waves with real parallelism, commits from a snapshot
+that was never the real state. Thirteen buckets are declared *required*: if one of them is
+never hit the run fails, because a green run over cases that never enter the interesting
+states is not evidence. Use `--no-coverage-gate` to report without enforcing.
+
+Replay statistics: committed transactions, attempts per commit (average and maximum), share of
+commits that needed a retry, replayed trace events, read-set sizes, wave size histogram.
+
+## Manifest
+
+`--manifest FILE` writes a JSON record of the run: timestamp, duration, Python and Lean
+versions, platform, per-phase seeds, case counts, per-phase results, the coverage and replay
+statistics, and the negative table with `total`/`caught` per breakage. CI runs
+`scripts/verify.py`, which always writes `witness-manifest.json` and uploads it as a build
+artifact, so any published number can be traced to the run that produced it.
+
+## Reference run
+
+Lean 4.31.0, seed 2026, `python m0.py all`: Phase A 40/40, Phase B and Phase C 3 000 cases
+each with 0 discrepancies (~35 000 aborts), negative suite as in the table, 21 226 committed
+transactions, 2.02 attempts per commit on average (max 26), all coverage buckets non-empty.
+Earlier long runs on two seeds: 106 000 cases, 0 discrepancies.
+
+## What the witness is, and is not
+
+`m0.py` is a falsification / validation witness, not a second proof. Agreement over many cases
+raises confidence. A discrepancy is a counterexample to the implementation or to the
+transcription of the specification — never to the theorem.

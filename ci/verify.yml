@@ -41,3 +41,11 @@ jobs:
 
       - name: Build, check axioms, run the witness
         run: python scripts/verify.py
+
+      - name: Upload the witness manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: witness-manifest
+          path: witness-manifest.json
+          if-no-files-found: warn

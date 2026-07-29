@@ -3,3 +3,4 @@ __pycache__/
 .lake/
 build/
 *.olean
+witness-manifest.json
