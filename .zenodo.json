@@ -1,0 +1,8 @@
+{
+  "title": "M0: deterministic state semantics, a Lean-mechanized model",
+  "upload_type": "software",
+  "creators": [{"name": "Topicspot"}],
+  "license": "MIT",
+  "keywords": ["observational determinism", "refinement", "Lean 4", "mechanized semantics", "substrate independence"],
+  "description": "Lean 4 mechanization of M0, a deterministic state semantics built around observational determinism, with results L1-L5, an independent differential witness, and a reproducibility manifest."
+}

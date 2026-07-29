@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this artifact, please cite it as below."
+title: "M0: deterministic state semantics, a Lean-mechanized model"
+type: software
+authors:
+  - name: "Topicspot"
+repository-code: "https://github.com/Topicspot/m0-semantics"
+license: "MIT OR Apache-2.0"
+version: "1.1"
+date-released: "2026-07-29"
+keywords:
+  - observational determinism
+  - refinement
+  - Lean 4
+  - mechanized semantics
+  - substrate independence
+abstract: >-
+  Lean 4 mechanization of M0, a deterministic state semantics built around
+  observational determinism. Proves a ladder of results (L1-L5): sequential
+  determinism, parallel-to-sequential refinement, the boundary of safe
+  observations, strictness of the equivalence levels, substrate independence
+  over two interface laws, and failure-tolerant substrate independence under
+  crash-stop failures. Includes an independent differential witness and a
+  reproducibility manifest.
