@@ -74,8 +74,8 @@ statistics, and the negative table with `total`/`caught` per breakage. CI runs
 `scripts/verify.py`, which always writes `witness-manifest.json` and uploads it as a build
 artifact, so any published number can be traced to the run that produced it.
 
-`run-v1.0.json` in this directory is the frozen manifest of the run that corresponds to the
-v1.0 tag.
+`run-v1.0.json` and `run-v1.1.json` in this directory are the frozen manifests of the runs
+that correspond to the v1.0 and v1.1 tags.
 
 ## Reference run
 

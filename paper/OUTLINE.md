@@ -1,7 +1,7 @@
 # Write-up plan
 
 [`EXTENDED_ABSTRACT.md`](EXTENDED_ABSTRACT.md) is the current text and the intended entry
-point for a reader: motivation, property X, the model, results L1 to L4, mechanization and
+point for a reader: motivation, property X, the model, results L1 to L5, mechanization and
 witness, limitations, future work.
 
 The full paper, if it happens, expands the same skeleton rather than replacing it:
@@ -15,6 +15,11 @@ The full paper, if it happens, expands the same skeleton rather than replacing i
 5. L3A and L3B as a single boundary statement, with the necessity lemmas.
 6. L3.5 with the strictness witnesses.
 7. L4: the `SoundSubstrate` interface, the two instances, the frame theorem for waves.
+7a. L5: the failure model (crash-stop), `FailSoundSubstrate`, prefix monotonicity of the
+   fold, failure-tolerant independence with the factorization clause, conservativity over
+   L4, the crash-stop instance and the strictness witness. A half-page ladder diagram
+   (Seq → parallel refinement → boundary → substrate independence → failure refinement)
+   goes here, per the co-author's note after v1.1.
 8. Witness methodology: what a differential witness proves, what it cannot, coverage gating.
 9. Related work: see [`RELATED_WORK.md`](RELATED_WORK.md) for the matrix. Six groups:
    serializability theory, deterministic transaction processing, correctness conditions and

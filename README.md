@@ -64,7 +64,7 @@ Development continues on top of the frozen artifact; nothing below changes a v1.
 
 | Layer | Content | State |
 | --- | --- | --- |
-| L5 | failure-tolerant substrate independence: the `forced` law weakened to a journal *prefix* (`FailSoundSubstrate`), observables provably in prefix order, crash-observable safety, crash-stop machine as instance | proved (`lean/Lemma5.lean`) |
+| L5 | failure-tolerant substrate independence: the `forced` law weakened to a journal *prefix* (`FailSoundSubstrate`), observables provably in prefix order, crash-observable safety, crash-stop machine as instance | proved (`lean/Lemma5.lean`), released in v1.1 with witness phase D |
 
 Why this direction and not cost semantics first: [`docs/NEXT_STAGE.md`](docs/NEXT_STAGE.md).
 
@@ -88,7 +88,7 @@ CHANGELOG.md
 Lean 4.31.0 (installed automatically by `elan` from `lean-toolchain`) and Python 3.10+.
 
 ```bash
-lake build              # elaborate all five Lean files
+lake build              # elaborate all six Lean files
 python scripts/verify.py   # build + 0 sorry + axiom footprint + witness
 ```
 
@@ -103,11 +103,13 @@ Python 3.10+, standard library only.
 
 ```bash
 python witness/m0.py b --n-b 2000      # parallel substrates vs reference
+python witness/m0.py d --n-d 2000      # crash-stop runs against the L5 laws
 python witness/m0.py neg               # intentionally broken substrates must be caught
 ```
 
-Expected: Phase B reports `0 discrepancies`; the negative suite catches the three structural
-breakages (`wrong_order`, `schedule_counter`, `wave_illegal_partition`) in 100% of cases, and
+Expected: Phases B and D report `0 discrepancies`; the negative suite catches the three
+structural breakages (`wrong_order`, `schedule_counter`, `wave_illegal_partition`) and the two
+crash breakages (`crash_emit_after_halt`, `crash_torn_commit`) in 100% of cases, and
 the five observable-level ones — missing validation, a barrier-free race, emits in worker
 order, a worker-id leak, a partition-id leak — only part of the time. That is not a bug but
 the empirical face of observable coincidence from L3.5. Each run also reports structural

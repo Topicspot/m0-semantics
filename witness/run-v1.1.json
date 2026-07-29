@@ -1,0 +1,112 @@
+{
+  "tool": "m0.py",
+  "timestamp_utc": "2026-07-29T13:43:32Z",
+  "duration_s": 4.62,
+  "python": "3.13.14",
+  "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+  "lean": "Lean (version 4.31.0, x86_64-unknown-linux-gnu, commit 68218e876d2a38b1985b8590fff244a83c321783, Release)",
+  "seeds": {
+    "base": 2026,
+    "phase_a": 2026,
+    "phase_b": 2027,
+    "phase_c": 2028,
+    "negative": 2029,
+    "phase_d": 2030
+  },
+  "counts": {
+    "a": 40,
+    "b": 3000,
+    "c": 3000,
+    "d": 2000,
+    "neg": 400
+  },
+  "phase": "all",
+  "results": {
+    "phase_a_mismatches": 0,
+    "phase_b_discrepancies": 0,
+    "phase_c_discrepancies": 0,
+    "phase_d_discrepancies": 0,
+    "negative_failures": 0
+  },
+  "passed": true,
+  "coverage": {
+    "case:aborted": 4145,
+    "case:emitting": 4668,
+    "case:empty_readset": 34972,
+    "case:hostile_commit": 22003,
+    "case:multi_wave": 4418,
+    "case:parallel_wave": 3419,
+    "case:read_own_write": 3741,
+    "case:repeated_tx": 3828,
+    "crash:full": 522,
+    "crash:midway": 967,
+    "crash:none": 511,
+    "crash:wave_barrier": 713,
+    "instr:emit": 46410,
+    "instr:ext": 23094,
+    "instr:ite": 23181,
+    "instr:read": 23068,
+    "instr:write": 46497
+  },
+  "wave_sizes": {
+    "1": 13312,
+    "2": 3704,
+    "3": 876,
+    "4": 263,
+    "5": 63,
+    "6": 16
+  },
+  "trace_events": 61009,
+  "commits": 24821,
+  "attempts_per_commit": {
+    "avg": 1.923,
+    "max": 26,
+    "retried": 4145
+  },
+  "readset_size": {
+    "avg": 0.7658,
+    "max": 6
+  },
+  "negative": {
+    "wrong_order": {
+      "total": 314,
+      "caught": 314
+    },
+    "no_validation": {
+      "total": 400,
+      "caught": 205
+    },
+    "schedule_counter": {
+      "total": 400,
+      "caught": 400
+    },
+    "wave_illegal_partition": {
+      "total": 226,
+      "caught": 226
+    },
+    "wave_no_barrier": {
+      "total": 226,
+      "caught": 8
+    },
+    "wave_emit_worker_order": {
+      "total": 400,
+      "caught": 22
+    },
+    "worker_id_leak": {
+      "total": 400,
+      "caught": 125
+    },
+    "partition_id_leak": {
+      "total": 400,
+      "caught": 220
+    },
+    "crash_emit_after_halt": {
+      "total": 400,
+      "caught": 400
+    },
+    "crash_torn_commit": {
+      "total": 107,
+      "caught": 107
+    }
+  }
+}
