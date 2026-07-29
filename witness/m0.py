@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-m0.py — hostile independent executor / differential witness for the M₀
+m0.py - hostile independent executor / differential witness for the M₀
 Lean mechanization (Lemma4.lean).
 
 STATUS (fixed by review, 2026-07-09):
@@ -8,7 +8,7 @@ STATUS (fixed by review, 2026-07-09):
     m0.py  : falsification / validation witness.  Agreement on millions
              of cases raises confidence; a discrepancy is a counter-
              example to the *implementation or the specification
-             transcription* — never to the theorem.
+             transcription* - never to the theorem.
 
 Phases (reviewer's fixed development order):
     A  AST generator + pure sequential evaluator,
@@ -33,7 +33,7 @@ Phases (reviewer's fixed development order):
                           lands on Seq(P,J) (factorization of
                           fail_substrate_independence)
     N  negative mode: intentionally broken substrates must be CAUGHT
-       by the checker — wrong commit order, missing validation,
+       by the checker - wrong commit order, missing validation,
        scheduleCounter, an illegal wave partition, a wavefront without
        the entry-state barrier, two further schedule leaks (physical
        worker position, wave index), and two crash breakages
@@ -401,18 +401,18 @@ def wavefront_run(P, s0, waves, rng=None, stats=None, break_mode=None):
     """WaveRun: each wave executes against the FIXED wave-entry state;
     barrier merge in journal order; emits concatenated in journal
     order.  Physical execution order inside a wave is randomly
-    permuted (worker permutation) — it must not matter.
+    permuted (worker permutation) - it must not matter.
 
     break_mode deliberately violates one rule at a time, for the
     negative suite:
-        "no_barrier"    — transactions in a wave see each other's writes,
+        "no_barrier"    - transactions in a wave see each other's writes,
                           in physical (shuffled) order instead of the
                           fixed wave-entry state ("no_barrier_illegal"
                           does the same on a deliberately illegal wave)
-        "emit_worker"   — emits concatenated in physical order
-        "worker_leak"   — the physical position of a transaction inside
+        "emit_worker"   - emits concatenated in physical order
+        "worker_leak"   - the physical position of a transaction inside
                           its wave leaks into the emitted values
-        "partition_leak"— the wave index leaks into the emitted values
+        "partition_leak"- the wave index leaks into the emitted values
     """
     s, o = dict(s0), []
     for wi, ts in enumerate(waves):
@@ -550,7 +550,7 @@ def phase_a(n, seed, verbose=True):
             mismatches += 1
             print(f"  MISMATCH case {i}: python={py} lean={lean_results.get(i)}")
     if verbose:
-        print(f"Phase A: {n} cases, python_seq vs Lean #eval runSeq — "
+        print(f"Phase A: {n} cases, python_seq vs Lean #eval runSeq - "
               f"{n - mismatches} agree, {mismatches} mismatches")
     Path(tmp).unlink(missing_ok=True)
     return mismatches
@@ -653,7 +653,7 @@ def phase_bc(n, seed, hostility, delay_rate, label, stats=None):
 
 
 # ----------------------------------------------------------------------
-# Phase D — crash-stop runs (mirrors Lemma5 / FailSoundSubstrate)
+# Phase D - crash-stop runs (mirrors Lemma5 / FailSoundSubstrate)
 # ----------------------------------------------------------------------
 
 def is_prefix(a: list, b: list) -> bool:
@@ -664,11 +664,11 @@ def check_crash(P, J, s0, consumed, s, o, proj) -> list:
     """The four L5 checks for a crashed run that consumed `consumed`
     (a candidate prefix of J) and finished in (s, o) with semantic
     projection `proj`:
-      forcedPrefix  — proj is a prefix of J;
-      refines       — (s, o) == Seq(P, consumed prefix);
-      fail_observable_prefix — o is a prefix of the reference emit
+      forcedPrefix  - proj is a prefix of J;
+      refines       - (s, o) == Seq(P, consumed prefix);
+      fail_observable_prefix - o is a prefix of the reference emit
                       stream (no fabricated observations);
-      recovery factorization — Seq of the remaining journal, resumed
+      recovery factorization - Seq of the remaining journal, resumed
                       from the crash state, lands exactly on Seq(P, J)
                       (clause (ii) of fail_substrate_independence).
     """
@@ -695,10 +695,10 @@ CRASH_REQUIRED = ("crash:none", "crash:midway", "crash:full", "crash:wave_barrie
 def phase_crash(n, seed, stats=None):
     """Random crash points on both substrates.
 
-    Substrate 1 (optimistic): crash between transactions — the machine
+    Substrate 1 (optimistic): crash between transactions - the machine
     stops consuming the journal after a random number of commits
     (mirrors CrashRun: commits are atomic, `crash` is legal anywhere
-    between them).  Substrate 2 (wavefront): crash at a wave barrier —
+    between them).  Substrate 2 (wavefront): crash at a wave barrier -
     a random prefix of the wave partition is executed.
 
     Checked per case: forcedPrefix, refines(prefix), observable prefix
@@ -731,7 +731,7 @@ def phase_crash(n, seed, stats=None):
             print(f"  DISCREPANCY D: {errs}\n    P={P}\n    J={J}\n    cut={cut}\n    s0={s0}")
     missing = [] if stats is None else [k for k in CRASH_REQUIRED if not stats.cov[k]]
     if missing:
-        print(f"Phase D: UNREACHED crash buckets {missing} — the run proves nothing about them")
+        print(f"Phase D: UNREACHED crash buckets {missing} - the run proves nothing about them")
         bad += 1
     print(f"Phase D (crash): {n} cases, {bad} discrepancies")
     return bad
@@ -741,7 +741,7 @@ def phase_crash(n, seed, stats=None):
 # Negative mode: broken substrates must be caught
 # ----------------------------------------------------------------------
 
-#: broken substrates that MUST be caught every single time — a rate below
+#: broken substrates that MUST be caught every single time - a rate below
 #: 100% here is a hole in the checker, not a property of the model.
 ALWAYS_CAUGHT = ("wrong_order", "schedule_counter", "wave_illegal_partition",
                  "crash_emit_after_halt", "crash_torn_commit")
@@ -749,7 +749,7 @@ ALWAYS_CAUGHT = ("wrong_order", "schedule_counter", "wave_illegal_partition",
 
 def negative_mode(n, seed, cov=None):
     """Every entry is an intentionally broken substrate.  Some breakages
-    are invisible in the observable for some cases — that is exactly the
+    are invisible in the observable for some cases - that is exactly the
     observable-coincidence layer of L3.5, so those only have to be caught
     at least once, while the structural ones must be caught always."""
     rng = random.Random(seed)
@@ -794,7 +794,7 @@ def negative_mode(n, seed, cov=None):
         record("schedule_counter", errs)
 
         # 4. illegal wave partition: fuse two waves with overlapping
-        #    footprints — WaveOk is violated, the checker must say so
+        #    footprints - WaveOk is violated, the checker must say so
         bad_waves = merge_conflicting_waves(P, waves)
         if bad_waves is not None:
             ws, wo = wavefront_run(P, s0, bad_waves, rng, break_mode="illegal_partition")
@@ -831,7 +831,7 @@ def negative_mode(n, seed, cov=None):
 
         # 9. fabricated observation after a crash: the substrate halts
         #    mid-journal but emits one value it never computed.  The
-        #    sneakiest fabrication is the CORRECT next reference value —
+        #    sneakiest fabrication is the CORRECT next reference value -
         #    the prefix law alone cannot see it, only `refines` against
         #    Seq(consumed prefix) can; past the end of the reference
         #    stream any extra value breaks the prefix law itself.
@@ -841,7 +841,7 @@ def negative_mode(n, seed, cov=None):
         record("crash_emit_after_halt",
                check_crash(P, J, s0, J[:cut], s, o + [fabricated], sem_proj(events)))
 
-        # 10. torn commit: the crash lands "inside" a commit — part of the
+        # 10. torn commit: the crash lands "inside" a commit - part of the
         #     next transaction's write set is applied without the journal
         #     being consumed.  Atomicity of commit w.r.t. crash is exactly
         #     what CrashRun promises, so this must be caught.

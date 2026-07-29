@@ -1,6 +1,6 @@
 # Witness
 
-`m0.py` — external hostile executor and differential witness for the M₀ mechanization.
+`m0.py`: external hostile executor and differential witness for the M₀ mechanization.
 Python 3.10+, standard library only, no arguments required.
 
 ```bash
@@ -13,40 +13,40 @@ python m0.py all --manifest run.json   # reproducible record of the run
 
 Phases:
 
-- **A** — random AST programs, pure sequential interpreter, differential check
+- **A**: random AST programs, pure sequential interpreter, differential check
   `python_seq == Lean #eval runSeq`. Requires `lean` on `PATH`; the harness is built on top of
   `../lean/Lemma4.lean`.
-- **B** — parallel trace generator (attempt / snapshot / abort / commit) plus a wavefront
+- **B**: parallel trace generator (attempt / snapshot / abort / commit) plus a wavefront
   generator with random partitions and random worker permutations. Per trace it checks
   `forced` (proj == J), `sound` (result == Seq(P,J)), `observable` (emit stream equals the
   reference), independent replay of the admissibility rules, cross-substrate agreement, and
-  the frame corollary — inside a legal wave the entry-state barrier is redundant, because the
+  the frame corollary: inside a legal wave the entry-state barrier is redundant, because the
   footprints are disjoint.
-- **C** — adversarial fuzzing: hostile snapshots, abort storms, artificial delays.
-- **D** (`d` / `crash`) — crash-stop runs, mirroring `Lemma5.lean`. The optimistic machine
+- **C**: adversarial fuzzing: hostile snapshots, abort storms, artificial delays.
+- **D** (`d` / `crash`): crash-stop runs, mirroring `Lemma5.lean`. The optimistic machine
   halts between transactions at a random point, the wavefront machine at a random wave
   barrier. Per run it checks the four L5 laws: `forcedPrefix` (the projection is a prefix of
   the journal), `refines` (the result equals `Seq` of the consumed prefix), the observable
-  prefix law (the emit stream is a prefix of the reference — a crash may truncate output,
+  prefix law (the emit stream is a prefix of the reference; a crash may truncate output,
   never fabricate it), and recovery factorization (`Seq` of the remaining journal, resumed
   from the crash state, lands exactly on `Seq(P, J)`). Phase-local coverage requires crashes
   at zero, mid-journal, at the very end, and at a wave barrier, or the phase fails.
-- **neg** — intentionally broken substrates, listed below.
+- **neg**: intentionally broken substrates, listed below.
 
 ## Negative suite
 
 | Breakage | Must be caught | Typical rate |
 | --- | --- | --- |
-| `wrong_order` — commit order deviates from the journal | always | 100% |
-| `schedule_counter` — abort count leaks into the observable | always | 100% |
-| `wave_illegal_partition` — two conflicting transactions fused into one wave | always | 100% |
-| `crash_emit_after_halt` — a crashed run emits a value it never computed (the sneaky variant: the *correct* next reference value, invisible to the prefix law alone) | always | 100% |
-| `crash_torn_commit` — a crash lands inside a commit: part of the next write set applied without consuming the journal | always | 100% |
-| `no_validation` — hostile snapshots committed without validation | at least once | ~48% |
-| `wave_no_barrier` — racing on shared cells with no wave-entry state | at least once | ~4% |
-| `wave_emit_worker_order` — emits merged in physical, not journal, order | at least once | ~9% |
-| `worker_id_leak` — physical position inside the wave reaches the emitted values | at least once | ~29% |
-| `partition_id_leak` — wave index reaches the emitted values | at least once | ~53% |
+| `wrong_order`: commit order deviates from the journal | always | 100% |
+| `schedule_counter`: abort count leaks into the observable | always | 100% |
+| `wave_illegal_partition`: two conflicting transactions fused into one wave | always | 100% |
+| `crash_emit_after_halt`: a crashed run emits a value it never computed (worst case: the *correct* next reference value, which the prefix law alone cannot see) | always | 100% |
+| `crash_torn_commit`: a crash lands inside a commit: part of the next write set applied without consuming the journal | always | 100% |
+| `no_validation`: hostile snapshots committed without validation | at least once | ~48% |
+| `wave_no_barrier`: racing on shared cells with no wave-entry state | at least once | ~4% |
+| `wave_emit_worker_order`: emits merged in physical, not journal, order | at least once | ~9% |
+| `worker_id_leak`: physical position inside the wave reaches the emitted values | at least once | ~29% |
+| `partition_id_leak`: wave index reaches the emitted values | at least once | ~53% |
 
 The three structural breakages must be caught in 100% of cases; anything less is a hole in the
 checker. The rest are only required to be caught at least once, and the fact that they are
@@ -88,4 +88,4 @@ Earlier long runs on two seeds: 106 000 cases, 0 discrepancies.
 
 `m0.py` is a falsification / validation witness, not a second proof. Agreement over many cases
 raises confidence. A discrepancy is a counterexample to the implementation or to the
-transcription of the specification — never to the theorem.
+transcription of the specification, never to the theorem.

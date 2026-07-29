@@ -1,5 +1,5 @@
 /-
-  M₀ mechanization — Lemma 5 (Failure-tolerant substrate independence).
+  M₀ mechanization - Lemma 5 (Failure-tolerant substrate independence).
 
   Next research stage after v1.0, chosen per the Related Work
   conclusion ("the more distinctive direction may be to push the
@@ -9,21 +9,21 @@
   Thesis being mechanized:
 
       substrate independence (L4) survives the weakening of `forced`
-      from equality to a PREFIX of the journal — i.e. it extends to
-      substrates that may crash-stop mid-journal — and the price is
+      from equality to a PREFIX of the journal - i.e. it extends to
+      substrates that may crash-stop mid-journal - and the price is
       exact: results agree not on equality of observables but on the
       PREFIX ORDER of observables.
 
   Construction.
 
   1. Sequential prefix monotonicity (§4): the reference fold is
-     monotone in the journal — `runSeq_append` decomposes the fold
+     monotone in the journal - `runSeq_append` decomposes the fold
      over a journal concatenation, and `runSeq_out_shift` shows the
      emit stream only ever grows.  Consequence: consuming a prefix of
      the journal emits a prefix of the reference observable.  This is
      a property of Seq alone, independent of any machine.
 
-  2. `FailSoundSubstrate` (§5) — the L4 interface with `forced`
+  2. `FailSoundSubstrate` (§5) - the L4 interface with `forced`
      weakened to `forcedPrefix : proj sc <+: J`.  `refines` is
      unchanged: every legal (possibly crashed) run still refines the
      sequential fold of its own projection.  Every `SoundSubstrate`
@@ -32,31 +32,31 @@
      this interface: nothing in v1.0 is modified.
 
   3. Results (§5):
-     * `fail_run_eq_seq_proj` — every legal run on every fail-sound
+     * `fail_run_eq_seq_proj` - every legal run on every fail-sound
        substrate equals Seq of its consumed prefix (the analogue of
        `substrate_run_eq_seq`);
-     * `fail_substrate_independence` — for ANY two fail-sound
+     * `fail_substrate_independence` - for ANY two fail-sound
        substrates, if one run's projection is a prefix of the
        other's, the observables stand in prefix order and the longer
        run factors through the shorter run's result state: crashed
        runs of different machines never DIVERGE, they only STOP;
-     * `fail_substrate_independence_eq` — equal projections still
+     * `fail_substrate_independence_eq` - equal projections still
        give equal results (recovering the L4 conclusion inside the
        weaker interface);
-     * `fail_observable_prefix` — crash-observable safety: the
+     * `fail_observable_prefix` - crash-observable safety: the
        observable of ANY legal run on ANY fail-sound substrate is a
        prefix of the reference observable Seq(P, J).  A crash can
        truncate the output; it can never fabricate output the
        journal did not order.
 
   4. Substrate instance (§6): the crash-stop optimistic machine
-     `CrashRun` — the trace machine of L3.5 with one new legal event:
+     `CrashRun` - the trace machine of L3.5 with one new legal event:
      halting at any point with the remaining journal unconsumed.
      `crash_forced_prefix` and `crash_refines_seq` make it a
      `FailSoundSubstrate`; `runTrace_is_crashRun` embeds every total
      optimistic run, so the machine is a strict extension.
 
-  5. Witnesses (§7): `crash_prefix_witness` — a crashed run on the
+  5. Witnesses (§7): `crash_prefix_witness` - a crashed run on the
      journal [0, 1] whose projection [0] violates the L4 `forced`
      law (the weakening is strict: this machine is NOT a
      SoundSubstrate), whose observable differs from the total run's
@@ -66,7 +66,7 @@
   What is deliberately NOT claimed: nothing here says a crashed run
   can be RESUMED (recovery is a liveness/implementation concern, out
   of X, exactly like fairness in L2); and nothing constrains WHERE a
-  substrate may crash — any prefix is admissible, the theorem is
+  substrate may crash - any prefix is admissible, the theorem is
   about what the crash may have emitted.
 
   Self-contained: `lean Lemma5.lean`.  §0–§3 shared verbatim with
@@ -600,7 +600,7 @@ theorem fail_run_eq_seq_proj {Q : Type} {E : Q → TxId → Int} {P : Program Q}
     one run's projection is a prefix of the other's, then (i) the
     observables stand in prefix order and (ii) the longer run factors
     exactly through the shorter run's result.  Runs of different
-    machines never diverge under partial failure — they only stop. -/
+    machines never diverge under partial failure - they only stop. -/
 theorem fail_substrate_independence {Q : Type} {E : Q → TxId → Int} {P : Program Q}
     (A B : FailSoundSubstrate Q E P)
     {s : State} {o : Out} {J : Journal} {a : A.Sched} {b : B.Sched}
@@ -634,7 +634,7 @@ theorem fail_substrate_independence_eq {Q : Type} {E : Q → TxId → Int} {P : 
   exact seq_deterministic e₁ e₂
 
 /-- Conservativity: L4 substrate independence re-derived through the
-    weaker interface — the strengthening changes no v1.0 statement. -/
+    weaker interface - the strengthening changes no v1.0 statement. -/
 theorem substrate_independence_of_fail {Q : Type} {E : Q → TxId → Int} {P : Program Q}
     (A B : SoundSubstrate Q E P)
     {s : State} {o : Out} {J₁ J₂ : Journal} {a : A.Sched} {b : B.Sched}
@@ -665,8 +665,8 @@ theorem fail_observable_prefix {Q : Type} {E : Q → TxId → Int} {P : Program 
 /-- The trace machine of L3.5 with ONE new legal behaviour: halting at
     any point with the remaining journal unconsumed (`crash` is `nil`
     with the journal argument generalized from [] to J).  Everything
-    else — speculation, adversarial snapshots, validation, ordered
-    commit — is unchanged. -/
+    else - speculation, adversarial snapshots, validation, ordered
+    commit - is unchanged. -/
 inductive CrashRun {Q : Type} (E : Q → TxId → Int) (P : Program Q) :
     State → Out → Journal → Schedule → State → Out → Prop where
   | crash : CrashRun E P s o J [] s o
@@ -734,11 +734,11 @@ def Pemit : Program Unit
 /-- **Witness for the strictness and exactness of the weakening.**  On
     the journal [0, 1] the crash-stop machine legally halts after
     committing only tx 0:
-    * its projection [0] is NOT the journal — the L4 `forced` law fails,
+    * its projection [0] is NOT the journal - the L4 `forced` law fails,
       so this machine is not a SoundSubstrate (the weakening is strict);
-    * its observable [10] is NOT the total observable [10, 20] — crashed
+    * its observable [10] is NOT the total observable [10, 20] - crashed
       runs are not observably equal (equality is genuinely lost);
-    * its observable IS a prefix of the total observable — the prefix
+    * its observable IS a prefix of the total observable - the prefix
       law is exactly what survives. -/
 theorem crash_prefix_witness :
     ∃ (evs evsTot : Schedule) (s₁ s₂ : State) (o₁ o₂ : Out),
@@ -759,7 +759,7 @@ theorem crash_prefix_witness :
   · simp
 
 /-- Sanity: the crash observable [10] is what `fail_observable_prefix`
-    promises — a prefix of the reference Seq(Pemit, [0,1]) observable. -/
+    promises - a prefix of the reference Seq(Pemit, [0,1]) observable. -/
 theorem crash_prefix_witness_vs_seq :
     ∃ (evs : Schedule) (s' : State) (o' : Out),
       CrashRun E0 Pemit sInit [] [0, 1] evs s' o' ∧
@@ -771,14 +771,14 @@ theorem crash_prefix_witness_vs_seq :
     fail_observable_prefix (crashOptimisticSubstrate Unit E0 Pemit) h⟩
 
 /- ================================================================
-   §8  Completeness (realizability, as in L4 — NOT liveness)
+   §8  Completeness (realizability, as in L4 - NOT liveness)
    ================================================================ -/
 
 def FailSubstrateComplete {Q : Type} {E : Q → TxId → Int} {P : Program Q}
     (A : FailSoundSubstrate Q E P) : Prop :=
   ∀ s o J, ∃ (sc : A.Sched) (s' : State) (o' : Out), A.Run s o J sc s' o'
 
-/-- The crash machine is complete — trivially (it may crash at once),
+/-- The crash machine is complete - trivially (it may crash at once),
     but also non-vacuously: by `runTrace_is_crashRun` every total
     optimistic run is legal, so completeness of L4's substrate 1
     transfers.  Stated with the immediate witness. -/
