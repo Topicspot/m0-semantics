@@ -1,78 +1,81 @@
-# Weave
+# M₀ — deterministic state semantics
 
-**Weave** is a new systems & backend programming language in early development:
-memory safety and data-race freedom proven by the compiler (ownership + region
-inference, **no lifetime syntax**), BEAM-style lightweight isolated processes
-with **structured concurrency only** (no `async/await`, no function coloring),
-**effects-as-capabilities** in the type system, and `comptime` metaprogramming
-in the language itself.
+M₀ is a small formal model of *state that stays part of the protocol while the schedule does
+not*. It targets systems where a replayed run must produce byte-identical observable output —
+replicated state machines, deterministic simulations, matching engines, database kernels.
 
-```weave
-fn fetch_greeting(name: &String) -> Result<String, NetError> ! {net.Connect} {
-    let response = http.get("https://api.example.com/greet/{name}")?
-    Ok(response.body)
-}
+The property under study, informally:
 
-fn main() ! {net.Connect} {
-    scope {
-        let a = spawn { fetch_greeting("Ada") }
-        let b = spawn { fetch_greeting("Grace") }
-        println("{a.join()?} and {b.join()?}")
-    }
-}
-```
+> if two schedules are semantically equivalent for the same journal, the observable output of
+> the run is identical
+
+Formally `schedule₁ ≈_J schedule₂ ⇒ Observable(run₁) = Observable(run₂)`, with the reference
+`Seq(P, J) = fold(J)`.
+
+The model: transactional cells, optimistic execution against a snapshot, snapshot validation
+at commit, commit strictly in journal order.
 
 ## Status
 
-⚠️ **Pre-alpha, design-first.** The language specification is being written and
-the compiler is a bootstrap prototype (Rust). Nothing here is stable.
+Research, pre-publication. The mechanized part reaches Lemma 4 (substrate independence) in
+Lean 4.31 with `0 sorry`; the only axioms used are `propext` and `Quot.sound`, and the core
+`substrate_independence` theorem uses none.
 
-| Milestone | Status |
-|---|---|
-| Phase 1 spec — core architecture (memory, effects, concurrency, grammar core) | ✅ [`docs/spec/phase1_core_spec.md`](docs/spec/phase1_core_spec.md) |
-| Lexer (Unicode-secure, error-resilient, auto statement termination) | ✅ `crates/weave_lexer` |
-| Phase 2 spec — formal grammar, typing/region/effect rules, exec semantics | ✅ [`docs/spec/phase2_formal_spec.md`](docs/spec/phase2_formal_spec.md) |
-| Parser → AST | 🔜 next |
-| Type/region/effect checking (HIR) | planned |
-| Cranelift debug backend | planned |
+| Layer | Content | State |
+| --- | --- | --- |
+| L1 | deterministic sequential fold | proved |
+| L2 | ordered commit + validation ⇒ Parallel = Seq | proved |
+| L3A / L3B | boundary of admissible extensions + `scheduleCounter` counterexample | proved |
+| L3.5 | semantic ⊊ observable ⊊ coincidence | proved |
+| L4 | substrate independence (`SoundSubstrate`, optimistic + wavefront instances) | proved |
+| witness | `m0.py`, 106 000 randomized cases, 0 discrepancies | runs |
 
-## Design pillars
+All layers are mechanized and present in [`lean/`](lean/).
 
-1. **Safety is proven, not documented.** Ownership + borrow checking with fully
-   inferred regions; signatures use readable `from` provenance clauses
-   (`fn get(m: &Map<K,V>, k: K) -> &V from m`) instead of lifetime annotations.
-2. **Capabilities, not colors.** A function's type declares what it may *do*
-   (`! {fs.Read, net.Connect}`), not how it is scheduled. Concurrency is
-   `scope`/`spawn` structured processes with isolated heaps — no global GC,
-   no shared mutable state, no colored functions.
-3. **One language all the way down.** Compile-time metaprogramming is ordinary
-   Weave executed by the compiler (`comptime`) — no macro sublanguage.
-4. **Tooling is the product.** Query-based incremental compiler shared by CLI
-   and LSP, two backends (fast debug via Cranelift, optimized release via
-   MLIR/LLVM), one `weave` binary for build/test/fmt/lint/doc/packages.
-5. **Supply chain security by construction.** No code execution on package
-   install, content-addressed registry, hermetic deterministic builds,
-   capability audit of every dependency.
+Full witness run against the recovered mechanization (seed 2026): Phase A 40/40, Phase B and
+Phase C 3 000 cases each with 0 discrepancies, negative mode `wrong_order` 317/317,
+`schedule_counter` 400/400, `no_validation` 198/400.
 
-## Repository layout
+The Lean sources were lost with the working chat and recovered the same day. The
+mechanization is complete again — `Lemma1`, `Lemma2`, `Lemma3` (3A + 3B), `Lemma3_5`,
+`Lemma4` — and every file was re-checked from scratch under Lean 4.31.0: compiles, `0 sorry`,
+axiom footprint as documented, witness Phase A agreeing 100/100. See
+[lean/README.md](lean/README.md) for the per-file report and
+[docs/RECOVERY.md](docs/RECOVERY.md) for what happened.
+
+## Layout
 
 ```
-crates/
-  weave_diagnostics/   Structured diagnostics: spans, labels, suggestions, rendering
-  weave_lexer/         Tokens + Unicode-secure error-resilient lexer (spec §2)
-  weavec/              Compiler driver prototype (currently: `weavec lex file.wv`)
-docs/spec/             Language specification (Phase 1+)
-examples/              Weave source samples
+docs/     STATE_OF_PROJECT v5.1 (full research log, RU), recovery notes
+lean/     the mechanization, Lemma1 … Lemma4 (Lean 4.31, no dependencies)
+witness/  m0.py, the hostile differential witness
+paper/    write-up outline
+weave/    unrelated earlier project kept in this repo's history (see weave/README.md)
 ```
 
-## Building
+## Running the witness
+
+Python 3.10+, standard library only.
 
 ```bash
-cargo build
-cargo test
-cargo run -p weavec -- lex examples/hello.wv
+python witness/m0.py b --n-b 2000      # parallel substrates vs reference
+python witness/m0.py neg               # intentionally broken substrates must be caught
 ```
+
+Expected: Phase B reports `0 discrepancies`; negative mode catches `wrong_order` and
+`schedule_counter` in 100% of cases and `no_validation` in roughly half — the latter is not a
+bug but the empirical face of observable coincidence from L3.5.
+
+`python witness/m0.py a` additionally requires `lean` on `PATH`; it builds a harness on top of
+`lean/Lemma4.lean` and differentially compares the Python reference interpreter against
+`#eval runSeq`.
+
+## What the witness is, and is not
+
+`m0.py` is a falsification / validation witness, not a second proof. Agreement over millions
+of cases raises confidence. A discrepancy is a counterexample to the implementation or to the
+transcription of the specification — never to the theorem.
 
 ## License
 
-MIT OR Apache-2.0.
+Dual licensed under Apache-2.0 and MIT.
