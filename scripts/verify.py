@@ -157,7 +157,8 @@ def check_witness(quick: bool) -> list[str]:
     step("witness")
     args = ["python3", "witness/m0.py", "all", "--manifest", "witness-manifest.json"]
     if quick:
-        args += ["--n-a", "20", "--n-b", "300", "--n-c", "300", "--n-neg", "100"]
+        args += ["--n-a", "20", "--n-b", "300", "--n-c", "300", "--n-d", "300",
+                 "--n-neg", "100"]
     r = run(args)
     print((r.stdout + r.stderr).rstrip())
     if r.returncode != 0 or "ALL CHECKS PASSED" not in r.stdout:
