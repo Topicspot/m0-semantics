@@ -45,8 +45,8 @@ depending on something new fails CI.
   branch, and nothing about it is claimed here.
 - Liveness. M₀ is a safety story: it says what a run may observe, never that it finishes.
 - An implementation. The two substrates are models, not a database or a runtime.
-- A paper. `paper/` holds the extended abstract and a plan; there is no related-work
-  survey yet and no venue.
+- A paper. `paper/` holds the extended abstract, a related-work map and a plan; two
+  neighbouring works still have to be read in full, and no venue has been chosen.
 
 Reference run at the tag (seed 2026): Phase A 40/40, Phase B and Phase C 3 000 cases each with
 0 discrepancies, negative suite as in [witness/README.md](witness/README.md), all coverage
@@ -67,7 +67,7 @@ scripts/  verify.py — the single command CI and humans both run
 docs/     STATE_OF_PROJECT v5.1 (full research log, RU), recovery notes
 lean/     the mechanization, Lemma1 … Lemma4 (Lean 4.31, no dependencies)
 witness/  m0.py, the hostile differential witness
-paper/    extended abstract and the plan for a full write-up
+paper/    extended abstract, related-work map, plan for a full write-up
 weave/    unrelated earlier project kept in this repo's history (see weave/README.md)
 CHANGELOG.md
           what each release contains

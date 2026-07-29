@@ -39,6 +39,13 @@ example one that keeps a scratch cell alive after a retry. Requiring only "the s
 answer" is too weak: it says nothing about a system that emits along the way, which is exactly
 what a replayable service does.
 
+The property has a name elsewhere. In language-based security it is *observational
+determinism*: the attacker-visible behaviour of a concurrent program must not vary with the
+scheduler (Roscoe 1995; Zdancewic and Myers 2003). Since it quantifies over pairs of runs it
+is a 2-safety hyperproperty in the sense of Clarkson and Schneider (2010) rather than a trace
+property. This work does not claim the property; it claims a criterion for when a
+transactional discipline satisfies it, and a transfer theorem between implementations.
+
 Second, "the same schedule" is not the right notion of sameness for schedules. Two runs may
 differ in every operational detail and still be the same run semantically. The model therefore
 needs a structural equivalence on schedules, not an extensional one, and that equivalence is
@@ -197,7 +204,37 @@ counterexample to the implementation or to the transcription, never to the theor
 writes a JSON manifest with seeds, versions, counts, coverage and per-breakage statistics, and
 CI uploads it, so any published number can be traced to the run that produced it.
 
-## 6. Limitations
+## 6. Related work
+
+The full map, twenty-three works in six groups with the intersections spelled out, is in
+[`RELATED_WORK.md`](RELATED_WORK.md). In brief.
+
+*Known and used, not claimed.* Ordering the input log and executing deterministically as the
+route to replication and replay (Schneider 1990; the deterministic database line from Calvin
+2012 through BOHM, PWV, Aria and Spectrum). Optimistic execution with read-set validation
+(Kung and Robinson 1981) and the serializability tradition around it (Papadimitriou 1979;
+Bernstein, Hadzilacos and Goodman 1987). Implementation-independent specification of
+transactional behaviour (Adya 1999; Cerone, Bernardi and Gotsman 2015). Correctness stated
+against a sequential reference (Herlihy and Wing 1990; Guerraoui and Kapalka 2008). Refinement
+as the proof shape (Abadi and Lamport 1991) and its mechanization for transactional systems
+(VerIso 2025; C4 2022; the mechanized transactional-memory line). Determinism by construction
+in languages, through static footprints (DPJ 2009) or monotone state (LVars 2013).
+
+*Where this work differs.* The deterministic-database literature states the resulting rules as
+guidance ("no clocks, no thread identifiers, no retry counters") without a criterion; the
+security literature states the property but enforces it with a type system over a different
+model; the mechanization literature verifies protocols one at a time against an isolation
+level. What is assembled here is a two-sided criterion with a mechanized counterexample
+(L3A/L3B), the strict separation of semantic from observable equivalence and from coincidence
+(L3.5), and substrate independence as an interface theorem with two instances whose artifact
+vocabularies are disjoint (L4).
+
+Two neighbours are close enough to name rather than survey. Observational determinism is the
+same property in a different setting, and any claim here must be relative to it. VerIso is
+the closest mechanized work, and the comparison should be made after reading it in full
+rather than from its abstract.
+
+## 7. Limitations
 
 Stated deliberately, because the value of the artifact depends on its boundary being visible.
 
@@ -215,7 +252,7 @@ Stated deliberately, because the value of the artifact depends on its boundary b
 - **Model scale.** Cells hold integers, bodies are finite, and the oracle is a pure function.
   The results are about the discipline, not about a production type system.
 
-## 7. Future work
+## 8. Future work
 
 The natural next layer is **cost semantics**: attaching work to a run so that partitions and
 schedules can be compared rather than merely declared equivalent. That brings in conflict

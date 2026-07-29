@@ -16,9 +16,11 @@ The full paper, if it happens, expands the same skeleton rather than replacing i
 6. L3.5 with the strictness witnesses.
 7. L4: the `SoundSubstrate` interface, the two instances, the frame theorem for waves.
 8. Witness methodology: what a differential witness proves, what it cannot, coverage gating.
-9. Related work: serializability theory, deterministic databases and replay systems,
-   mechanized concurrency semantics. Not yet surveyed.
+9. Related work: see [`RELATED_WORK.md`](RELATED_WORK.md) for the matrix. Six groups:
+   serializability theory, deterministic transaction processing, correctness conditions and
+   their mechanization, refinement and verified systems, deterministic execution and replay,
+   deterministic parallelism in languages.
 10. Limits and the cost-semantics programme.
 
-Open before submission anywhere: a related-work survey (section 9) does not exist yet, and no
-venue has been chosen.
+Open before submission anywhere: read VerIso (VLDB 2025) and Zdancewic and Myers (CSFW 2003)
+in full and position the contribution against them precisely; no venue has been chosen.
