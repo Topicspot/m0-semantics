@@ -30,9 +30,15 @@ Lean 4.31 with `0 sorry`; the only axioms used were `propext` and `Quot.sound`, 
 | L4 | substrate independence (`SoundSubstrate`, optimistic + wavefront instances) | proved |
 | witness | `m0.py`, 106 000 randomized cases, 0 discrepancies | runs |
 
-**The Lean sources are currently missing** — see [docs/RECOVERY.md](docs/RECOVERY.md). This
-repository exists so that the surviving artifacts stop living in a chat log. Everything needed
-to re-derive the mechanization is in [lean/RECONSTRUCTION.md](lean/RECONSTRUCTION.md).
+Full witness run against the recovered mechanization (seed 2026): Phase A 40/40, Phase B and
+Phase C 3 000 cases each with 0 discrepancies, negative mode `wrong_order` 317/317,
+`schedule_counter` 400/400, `no_validation` 198/400.
+
+The Lean sources were lost with the working chat and recovered the same day; `Lemma4.lean`
+and `Lemma3_5.lean` are back in [`lean/`](lean/), re-verified from scratch (0 `sorry`, axioms
+`propext` / `Quot.sound` only, `substrate_independence` axiom-free, Phase A 100/100). The
+Lemma 3A/3B file with the `scheduleCounter` counterexample is still missing. See
+[docs/RECOVERY.md](docs/RECOVERY.md) and [lean/README.md](lean/README.md).
 
 ## Layout
 
@@ -56,8 +62,9 @@ Expected: Phase B reports `0 discrepancies`; negative mode catches `wrong_order`
 `schedule_counter` in 100% of cases and `no_validation` in roughly half — the latter is not a
 bug but the empirical face of observable coincidence from L3.5.
 
-`python witness/m0.py a` additionally requires `lean` on `PATH` and `witness/Lemma4.lean`; it
-is disabled until the mechanization is restored.
+`python witness/m0.py a` additionally requires `lean` on `PATH`; it builds a harness on top of
+`lean/Lemma4.lean` and differentially compares the Python reference interpreter against
+`#eval runSeq`.
 
 ## What the witness is, and is not
 

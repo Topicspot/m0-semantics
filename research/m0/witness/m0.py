@@ -42,6 +42,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 LEMMA4 = HERE / "Lemma4.lean"
+if not LEMMA4.exists():                      # repo layout: witness/ next to lean/
+    LEMMA4 = HERE.parent / "lean" / "Lemma4.lean"
 
 CELLS = [f"c{i}" for i in range(5)]
 VARS = [f"x{i}" for i in range(4)]
