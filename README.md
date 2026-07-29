@@ -1,6 +1,7 @@
 # M₀: deterministic state semantics
 
 [![verify](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml/badge.svg)](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21680072.svg)](https://doi.org/10.5281/zenodo.21680072)
 
 M₀ is a small formal model of *state that stays part of the protocol while the schedule does
 not*. It targets systems where a replayed run must produce byte-identical observable output:
