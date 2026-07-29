@@ -20,7 +20,20 @@ convention is defensible in isolation; together they are folklore, and folklore 
 compose. What is missing is a statement of the form: *these* observations are safe for *this*
 reason, and here is a counterexample for everything on the other side of the line.
 
-This work states that line and proves it for a minimal model.
+This work states that line and proves it for a minimal model. The folklore rules are not
+independent conventions: they are one class. Every safe observation factors through the
+journal and the semantic state; every unsafe one observes the execution relation itself, and
+one mechanized counterexample covers them all. That single criterion, not any particular rule,
+is what the model is built to state and prove.
+
+Concretely, the reader will find five results, each a strict step past the previous one, all
+machine-checked with no `sorry` and cross-validated by an independent differential witness:
+a deterministic sequential reference (L1); a proof that ordered commit plus snapshot
+validation makes any parallel schedule agree with that reference (L2); the boundary criterion
+with both a preservation schema and a counterexample (L3); the strict separation of semantic
+equivalence, observable equivalence and accidental coincidence (L3.5); an interface theorem
+making the whole story independent of the executing machine (L4); and its extension to
+machines that may crash mid-run (L5).
 
 ## 2. Property X
 
@@ -47,9 +60,11 @@ property. This work does not claim the property; it claims a criterion for when 
 transactional discipline satisfies it, and a transfer theorem between implementations.
 
 Second, "the same schedule" is not the right notion of sameness for schedules. Two runs may
-differ in every operational detail and still be the same run semantically. The model therefore
-needs a structural equivalence on schedules, not an extensional one, and that equivalence is
-what carries the whole result.
+differ in every operational detail — abort counts, snapshot choices, worker assignment — and
+still be the same run semantically; conversely, two runs may happen to print the same output
+for different semantic reasons. Fusing these notions is what makes the folklore look like a
+list of unrelated rules. The model therefore needs a structural equivalence on schedules, not
+an extensional one, and that equivalence is what carries the whole result.
 
 ## 3. The model M₀
 
