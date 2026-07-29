@@ -21,9 +21,9 @@ compose. What is missing is a statement of the form: *these* observations are sa
 reason, and here is a counterexample for everything on the other side of the line.
 
 This work states that line and proves it for a minimal model. The folklore rules are not
-independent conventions: they are one class. Every safe observation factors through the
-journal and the semantic state; every unsafe one observes the execution relation itself, and
-one mechanized counterexample covers them all. That single criterion, not any particular rule,
+independent conventions: they are one class (this is a theorem below, L3A/L3B, not a slogan).
+Every safe observation factors through the journal and the semantic state; every unsafe one
+observes the execution relation itself, and one mechanized counterexample covers them all. That single criterion, not any particular rule,
 is what the model is built to state and prove.
 
 Concretely, the reader will find five results, each a strict step past the previous one, all
@@ -46,7 +46,8 @@ stream the *Observable*; it is an explicit projection of the result, not the int
 
 Two remarks, both of which turned out to matter more than expected.
 
-First, X must be stated over the Observable rather than over the internal state. Requiring
+First — a design argument rather than a theorem — X must be stated over the Observable
+rather than over the internal state. Requiring
 identical internal states rules out substrates that are perfectly acceptable in practice, for
 example one that keeps a scratch cell alive after a retry. Requiring only "the same final
 answer" is too weak: it says nothing about a system that emits along the way, which is exactly
@@ -73,7 +74,9 @@ execution discipline.
 
 A **body** reads and writes cells, emits values, branches, and may invoke one further
 primitive discussed below. Expressions read only locals. Every external observation is
-factored through the cell interface, which is what makes the semantic universe closed. A
+factored through the cell interface, which is what makes the semantic universe closed: this
+is not an assumption but the definition of the AST (`Body` in the mechanization), and Lemma 3B
+is the demonstration of what breaks the moment the closure is pierced. A
 **program** maps transaction identifiers to bodies. A **journal** is a list of identifiers.
 
 The reference semantics is the sequential fold:
@@ -99,8 +102,10 @@ which is the position in the journal, and at nothing else.
 A **schedule** is reified as a trace of events: `attempt t σ` for a speculative attempt that
 was discarded, `commit t σ` for a validated commit. The **semantic projection** `semProj` of a
 trace is the list of committed identifiers in commit order. It carries the commit order, the
-assignment of logical time, and the journal that was consumed. It does not carry abort counts,
-snapshot choices, worker allocation, or timing. Two schedules are **semantically equivalent**,
+assignment of logical time, and the journal that was consumed (`sem_forced`). It does not
+carry abort counts, snapshot choices, worker allocation, or timing — and "does not carry" is
+witnessed, not asserted: `abort_count_artifact` exhibits two legal runs of one `(P, J)` that
+differ in an abort and agree in everything semantic. Two schedules are **semantically equivalent**,
 written `S₁ ≈_J S₂`, when their semantic projections are equal.
 
 ## 4. Results
@@ -144,8 +149,8 @@ the real state (`runInstr_snapshot_adequate`), and commit realization
 Since the oracle is a function of the journal position, this is the general statement that an
 observation of the form `o = f(state, journal, logical time)` preserves X. Corollaries cover
 the cases that motivated the question in the first place: events routed through the journal
-are safe, and allocating a fresh cell by journal position is safe. Allocation as such is not
-the problem.
+are safe, and allocating a fresh cell by journal position is safe
+(`safe_alloc_by_journal_position`). Allocation as such is not the problem.
 
 **L3B, the boundary from the forbidden side.** Take the same disciplined machine, ordered
 commit and validation intact, and let the oracle return the machine's attempt counter. Two
@@ -352,7 +357,8 @@ rather than from its abstract.
 Stated deliberately, because the value of the artifact depends on its boundary being visible.
 
 - **No liveness.** M₀ says what a run may observe, never that a run terminates. The wavefront
-  machine is total by construction, but progress under contention is not modelled.
+  machine is total by construction (`wave_progress`), but progress under contention is not
+  modelled.
 - **No performance and no cost semantics.** The model has no notion of work, latency, or
   contention. Nothing here says that a substrate is fast, or even that it is faster than the
   sequential fold.
@@ -362,7 +368,8 @@ Stated deliberately, because the value of the artifact depends on its boundary b
   no durability, no distribution. Failure is modelled (L5), but only as crash-stop between
   commits: resumption of a crashed run as a continued execution of one machine is not.
 - **Granularity is not claimed.** The third side of the minimality triangle, the trade-off
-  between transaction granularity and achievable parallelism, has experimental support only.
+  between transaction granularity and achievable parallelism, has experimental support only
+  (fuzz runs in the research log; no theorem is stated, and none should be inferred).
 - **Model scale.** Cells hold integers, bodies are finite, and the oracle is a pure function.
   The results are about the discipline, not about a production type system.
 
