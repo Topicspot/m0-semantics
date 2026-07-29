@@ -64,6 +64,9 @@ statistics, and the negative table with `total`/`caught` per breakage. CI runs
 `scripts/verify.py`, which always writes `witness-manifest.json` and uploads it as a build
 artifact, so any published number can be traced to the run that produced it.
 
+`run-v1.0.json` in this directory is the frozen manifest of the run that corresponds to the
+v1.0 tag.
+
 ## Reference run
 
 Lean 4.31.0, seed 2026, `python m0.py all`: Phase A 40/40, Phase B and Phase C 3 000 cases

@@ -17,11 +17,12 @@ Formally `schedule₁ ≈_J schedule₂ ⇒ Observable(run₁) = Observable(run�
 The model: transactional cells, optimistic execution against a snapshot, snapshot validation
 at commit, commit strictly in journal order.
 
-## Status
+## What v1.0 is
 
-Research, pre-publication. The mechanized part reaches Lemma 4 (substrate independence) in
-Lean 4.31 with `0 sorry`; the only axioms used are `propext` and `Quot.sound`, and the core
-`substrate_independence` theorem uses none.
+`v1.0` marks a finished research stage, not a finished research programme. It is a
+reproducible artifact: everything claimed below is re-checked by CI on every commit.
+
+**In v1.0**
 
 | Layer | Content | State |
 | --- | --- | --- |
@@ -30,20 +31,31 @@ Lean 4.31 with `0 sorry`; the only axioms used are `propext` and `Quot.sound`, a
 | L3A / L3B | boundary of admissible extensions + `scheduleCounter` counterexample | proved |
 | L3.5 | semantic ⊊ observable ⊊ coincidence | proved |
 | L4 | substrate independence (`SoundSubstrate`, optimistic + wavefront instances) | proved |
-| witness | `m0.py`, 106 000 randomized cases, 0 discrepancies, 8 negative substrates | runs |
+| witness | `m0.py`: differential witness, 8 negative substrates, coverage gate, JSON manifest | green |
 
-All layers are mechanized and present in [`lean/`](lean/).
+Mechanized in Lean 4.31.0 with `0 sorry`; the only axioms used are `propext` and `Quot.sound`,
+and `substrate_independence` — the main theorem — uses none. The full axiom footprint is
+compared against the documented one by `scripts/verify.py`, so a proof that silently starts
+depending on something new fails CI.
 
-Full witness run against the recovered mechanization (seed 2026): Phase A 40/40, Phase B and
-Phase C 3 000 cases each with 0 discrepancies, negative mode `wrong_order` 317/317,
-`schedule_counter` 400/400, `no_validation` 198/400.
+**Not in v1.0, explicitly**
 
-The Lean sources were lost with the working chat and recovered the same day. The
-mechanization is complete again — `Lemma1`, `Lemma2`, `Lemma3` (3A + 3B), `Lemma3_5`,
-`Lemma4` — and every file was re-checked from scratch under Lean 4.31.0: compiles, `0 sorry`,
-axiom footprint as documented, witness Phase A agreeing 100/100. See
-[lean/README.md](lean/README.md) for the per-file report and
-[docs/RECOVERY.md](docs/RECOVERY.md) for what happened.
+- Cost semantics and granularity: how much work a schedule does, conflict graphs, scheduler
+  models, performance. This is the next research stage, developed on the `cost-semantics`
+  branch, and nothing about it is claimed here.
+- Liveness. M₀ is a safety story: it says what a run may observe, never that it finishes.
+- An implementation. The two substrates are models, not a database or a runtime.
+- A paper. `paper/` holds an outline; the extended abstract comes after v1.0.
+
+Reference run at the tag (seed 2026): Phase A 40/40, Phase B and Phase C 3 000 cases each with
+0 discrepancies, negative suite as in [witness/README.md](witness/README.md), all coverage
+buckets non-empty. The manifest of that run is committed as
+[`witness/run-v1.0.json`](witness/run-v1.0.json) and attached to the release; CI uploads the
+manifest of every later run as an artifact.
+
+The Lean sources were lost with the working chat on 29.07.2026 and recovered the same day;
+every file was then re-checked from scratch. See [lean/README.md](lean/README.md) for the
+per-file report and [docs/RECOVERY.md](docs/RECOVERY.md) for what happened.
 
 ## Layout
 
@@ -56,6 +68,8 @@ lean/     the mechanization, Lemma1 … Lemma4 (Lean 4.31, no dependencies)
 witness/  m0.py, the hostile differential witness
 paper/    write-up outline
 weave/    unrelated earlier project kept in this repo's history (see weave/README.md)
+CHANGELOG.md
+          what each release contains
 ```
 
 ## Quick start

@@ -1,0 +1,97 @@
+{
+  "tool": "m0.py",
+  "timestamp_utc": "2026-07-29T12:14:54Z",
+  "duration_s": 4.97,
+  "python": "3.13.14",
+  "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+  "lean": "Lean (version 4.31.0, x86_64-unknown-linux-gnu, commit 68218e876d2a38b1985b8590fff244a83c321783, Release)",
+  "seeds": {
+    "base": 2026,
+    "phase_a": 2026,
+    "phase_b": 2027,
+    "phase_c": 2028,
+    "negative": 2029
+  },
+  "counts": {
+    "a": 40,
+    "b": 3000,
+    "c": 3000,
+    "neg": 400
+  },
+  "phase": "all",
+  "results": {
+    "phase_a_mismatches": 0,
+    "phase_b_discrepancies": 0,
+    "phase_c_discrepancies": 0,
+    "negative_failures": 0
+  },
+  "passed": true,
+  "coverage": {
+    "case:aborted": 3626,
+    "case:emitting": 4668,
+    "case:empty_readset": 29892,
+    "case:hostile_commit": 18610,
+    "case:multi_wave": 4418,
+    "case:parallel_wave": 3419,
+    "case:read_own_write": 3365,
+    "case:repeated_tx": 3828,
+    "instr:emit": 35267,
+    "instr:ext": 17543,
+    "instr:ite": 17700,
+    "instr:read": 17567,
+    "instr:write": 35395
+  },
+  "wave_sizes": {
+    "1": 11387,
+    "2": 3177,
+    "3": 743,
+    "4": 226,
+    "5": 56,
+    "6": 12
+  },
+  "trace_events": 56148,
+  "commits": 21226,
+  "attempts_per_commit": {
+    "avg": 2.0197,
+    "max": 26,
+    "retried": 3626
+  },
+  "readset_size": {
+    "avg": 0.7951,
+    "max": 6
+  },
+  "negative": {
+    "wrong_order": {
+      "total": 304,
+      "caught": 304
+    },
+    "no_validation": {
+      "total": 400,
+      "caught": 193
+    },
+    "schedule_counter": {
+      "total": 400,
+      "caught": 400
+    },
+    "wave_illegal_partition": {
+      "total": 239,
+      "caught": 239
+    },
+    "wave_no_barrier": {
+      "total": 239,
+      "caught": 9
+    },
+    "wave_emit_worker_order": {
+      "total": 400,
+      "caught": 34
+    },
+    "worker_id_leak": {
+      "total": 400,
+      "caught": 117
+    },
+    "partition_id_leak": {
+      "total": 400,
+      "caught": 210
+    }
+  }
+}
