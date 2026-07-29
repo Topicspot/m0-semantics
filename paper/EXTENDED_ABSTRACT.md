@@ -105,6 +105,31 @@ written `S₁ ≈_J S₂`, when their semantic projections are equal.
 
 ## 4. Results
 
+The five results form a ladder; each rung quantifies over strictly more than the one below.
+
+```
+            Seq(P, J) = fold(J)                  L1   one machine: none
+                  │
+                  ▼
+            ordered commit + validation          L2   one machine, any schedule
+            ⇒ Parallel = Seq
+                  │
+                  ▼
+            boundary of safe observations        L3   any oracle over (journal,
+            (preservation + counterexample)           logical time) — and no more
+                  │
+                  ▼
+            semantic ⊊ observable ⊊ coincidence  L3.5 any legal trace
+                  │
+                  ▼
+            substrate independence               L4   any machine satisfying
+            (forced + refines)                        two interface laws
+                  │
+                  ▼
+            failure refinement                   L5   any such machine,
+            (forced weakened to a prefix)             now allowed to crash
+```
+
 **L1, sequential determinism.** `Seq` is deterministic and its executable form is adequate:
 `evalBody_det`, `lemma1_seq_deterministic`, `runSeq_sound`, `seq_unique_result`.
 
@@ -163,7 +188,23 @@ sequential fold of its own projection (`refines`). Then:
   mentions neither machine's internals.
 - `substrate_run_eq_seq`: every legal run on every sound substrate equals `Seq(P, J)`. M₀ is
   the equivalence class; substrates are its representatives.
-- Two instances with disjoint vocabularies of artifacts are constructed. The optimistic trace
+- Two instances with disjoint vocabularies of artifacts are constructed:
+
+  ```
+                        Journal J
+                       ┌────┴────┐
+            optimistic │         │ wavefront (BSP)
+                       ▼         ▼
+      speculation,               static footprints,
+      hostile snapshots,         waves of disjoint tx,
+      validation, aborts         barrier merge, no aborts
+                       │         │
+                       └────┬────┘
+                            ▼
+                same Result, same Observable
+          (artifacts: abort count | wave partition)
+  ```
+ The optimistic trace
   machine has speculation, adversarial snapshots, validation and aborts. The wavefront machine
   is pessimistic and BSP-style: static conflict analysis on syntactic footprints, the journal
   cut into waves of pairwise non-conflicting transactions, every transaction of a wave running
@@ -213,6 +254,15 @@ lost. Concretely:
   and that the prefix law is exactly what survives.
 
 ### Failure model
+
+```
+  total run    A B C D E F      Observable  o₁ o₂ o₃ o₄
+  crashed run  A B C ×          Observable  o₁ o₂
+                                            └────┬───┘
+                                       a PREFIX, never a deviation:
+                                       truncation is legal,
+                                       fabrication is not
+```
 
 The failure model is deliberately minimal: **crash-stop between commits**. A substrate may
 halt at any point between transactions; commits are atomic with respect to crashes (the
