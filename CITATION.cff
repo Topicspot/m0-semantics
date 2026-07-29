@@ -6,7 +6,7 @@ authors:
   - name: "Topicspot"
 repository-code: "https://github.com/Topicspot/m0-semantics"
 license: "MIT OR Apache-2.0"
-version: "1.1"
+version: "1.1.1"
 date-released: "2026-07-29"
 keywords:
   - observational determinism

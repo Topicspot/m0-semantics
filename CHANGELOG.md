@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.1 (2026-07-29): citation metadata
+
+No changes to the model, proofs, witness, or paper. This release exists so the archived
+snapshot carries citation metadata.
+
+- `CITATION.cff`: GitHub now renders a "Cite this repository" entry.
+- `.zenodo.json`: deposit metadata for the Zenodo archive of this release.
+
 ## v1.1 (2026-07-29): failure refinement
 
 The safety story extended to partial failures. v1.0 stays the frozen reference point; nothing
