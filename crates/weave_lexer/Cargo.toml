@@ -1,0 +1,11 @@
+[package]
+name = "weave_lexer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+weave_diagnostics = { path = "../weave_diagnostics" }
+unicode-ident.workspace = true
+unicode-normalization.workspace = true
+unicode-script.workspace = true

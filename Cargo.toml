@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["crates/weave_diagnostics", "crates/weave_lexer", "crates/weavec"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jonbarkert135-cpu/new-language"
+
+[workspace.dependencies]
+unicode-ident = "1"
+unicode-normalization = "0.1"
+unicode-script = "0.5"

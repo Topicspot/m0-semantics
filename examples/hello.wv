@@ -1,0 +1,18 @@
+// Weave example: what the language will look like (Phase 1 spec).
+// This file lexes cleanly today; parsing arrives with the parser milestone.
+
+fn fetch_greeting(name: &String) -> Result<String, NetError> ! {net.Connect} {
+    let response = http.get("https://api.example.com/greet/{name}")?
+    Ok(response.body)
+}
+
+fn main() ! {net.Connect, fs.Write} {
+    scope {
+        let a = spawn { fetch_greeting("Ada") }
+        let b = spawn { fetch_greeting("Grace") }
+        match (a.join(), b.join()) {
+            (Ok(x), Ok(y)) => println("{x} and {y}"),
+            _ => println("network trouble"),
+        }
+    }
+}
