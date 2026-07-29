@@ -4,6 +4,7 @@ title: "M0: deterministic state semantics, a Lean-mechanized model"
 type: software
 authors:
   - name: "Topicspot"
+doi: "10.5281/zenodo.21680072"
 repository-code: "https://github.com/Topicspot/m0-semantics"
 license: "MIT OR Apache-2.0"
 version: "1.1.1"
