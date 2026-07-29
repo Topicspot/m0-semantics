@@ -58,6 +58,16 @@ The Lean sources were lost with the working chat on 29.07.2026 and recovered the
 every file was then re-checked from scratch. See [lean/README.md](lean/README.md) for the
 per-file report and [docs/RECOVERY.md](docs/RECOVERY.md) for what happened.
 
+## After v1.0
+
+Development continues on top of the frozen artifact; nothing below changes a v1.0 claim.
+
+| Layer | Content | State |
+| --- | --- | --- |
+| L5 | failure-tolerant substrate independence: the `forced` law weakened to a journal *prefix* (`FailSoundSubstrate`), observables provably in prefix order, crash-observable safety, crash-stop machine as instance | proved (`lean/Lemma5.lean`) |
+
+Why this direction and not cost semantics first: [`docs/NEXT_STAGE.md`](docs/NEXT_STAGE.md).
+
 ## Layout
 
 ```
@@ -65,7 +75,7 @@ lakefile.toml, lean-toolchain
           Lake package pinned to Lean 4.31.0
 scripts/  verify.py — the single command CI and humans both run
 docs/     STATE_OF_PROJECT v5.1 (full research log, RU), recovery notes
-lean/     the mechanization, Lemma1 … Lemma4 (Lean 4.31, no dependencies)
+lean/     the mechanization, Lemma1 … Lemma5 (Lean 4.31, no dependencies)
 witness/  m0.py, the hostile differential witness
 paper/    extended abstract, related-work map, plan for a full write-up
 weave/    unrelated earlier project kept in this repo's history (see weave/README.md)

@@ -12,6 +12,7 @@ whole chain up to substrate independence.
 | `Lemma3.lean` | 678 | Граница допустимых расширений. `lemma3A_extension_preservation` — для любого типа запросов `Q`, чьи ответы зависят от журнала, а не от расписания, свойство сохраняется. `lemma3B_boundary_counterexample` — контрпример `scheduleCounter`. Плюс леммы необходимости: `order_necessary`, `validation_necessary`, `par_progress`. |
 | `Lemma3_5.lean` | 620 | Граница эквивалентности расписаний: структурная `≈_J` через `semProj`, `lemma3_5_equiv_implies_observable`, `same_journal_all_equiv`, строгость включений semantic ⊊ observable ⊊ coincidence. |
 | `Lemma4.lean` | 1 018 | Независимость от субстрата: интерфейс `SoundSubstrate`, два инстанса (оптимистический трассовый и волновой), frame-теорема `wave_refines_seq`, `substrate_independence`, свидетели `wave_partition_artifact` и `cross_substrate_witness`, полнота `implements_M0_execute_eq`. |
+| `Lemma5.lean` | ~700 | Отказоустойчивая независимость от субстрата (после v1.0): `FailSoundSubstrate` — интерфейс L4 с законом `forced`, ослабленным до префикса журнала; `fail_substrate_independence` (наблюдаемые в префиксном порядке + факторизация), `fail_observable_prefix` (crash-observable safety), crash-stop машина как инстанс, свидетель строгости `crash_prefix_witness`, консервативность `substrate_independence_of_fail`. |
 
 ## Проверено в песочнице 29.07.2026
 

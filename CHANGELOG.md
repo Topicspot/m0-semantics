@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **Lemma 5 (failure-tolerant substrate independence)** — `lean/Lemma5.lean`,
+  the first post-v1.0 result, per the direction set by the related-work survey:
+  the `forced` law of the L4 interface weakened from equality with the journal
+  to a prefix of it (`FailSoundSubstrate`). Proved: prefix order of observables
+  plus exact factorization between any two fail-sound substrates
+  (`fail_substrate_independence`), crash-observable safety
+  (`fail_observable_prefix`), conservativity over L4
+  (`substrate_independence_of_fail`), the crash-stop optimistic machine as an
+  instance, and a witness that the weakening is strict and its price exact
+  (`crash_prefix_witness`). 0 `sorry`; axioms within propext/Quot.sound;
+  `fail_substrate_independence_eq` and `runTrace_is_crashRun` axiom-free.
+  Decision record: `docs/NEXT_STAGE.md`. No v1.0 statement is modified.
+
 ## v1.0 — 2026-07-29 — research artifact
 
 First stable point of the M₀ line. The tag is immutable: later fixes ship as `v1.0.1`, `v1.1`

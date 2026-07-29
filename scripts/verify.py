@@ -4,7 +4,7 @@ verify.py — one command that either says PASS or explains why not.
 
 Checks, in order:
 
-  1. `lake build` — all five Lean files elaborate under the pinned toolchain.
+  1. `lake build` — all Lean files elaborate under the pinned toolchain.
   2. no `sorry` in the sources, and no `sorryAx` in the axiom footprint of any
      checked theorem (the second check is the one that cannot be faked).
   3. the axiom footprint of every headline theorem equals what the project
@@ -62,6 +62,19 @@ EXPECTED: dict[str, dict[str, list[str]]] = {
         "wave_refines_seq": ["Quot.sound", "propext"],
         "cross_substrate_witness": ["Quot.sound", "propext"],
         "wave_partition_artifact": ["Quot.sound", "propext"],
+    },
+    "Lemma5.lean": {
+        "fail_substrate_independence_eq": [],
+        "runTrace_is_crashRun": [],
+        "seq_out_prefix": ["propext"],
+        "fail_substrate_independence": ["propext"],
+        "fail_observable_prefix": ["propext"],
+        "substrate_independence_of_fail": ["propext"],
+        "crash_forced_prefix": ["propext"],
+        "crash_prefix_witness": ["propext"],
+        "crash_refines_seq": ["Quot.sound", "propext"],
+        "crash_prefix_witness_vs_seq": ["Quot.sound", "propext"],
+        "crash_complete": ["Quot.sound", "propext"],
     },
 }
 
