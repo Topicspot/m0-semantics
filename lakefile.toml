@@ -1,0 +1,8 @@
+name = "m0"
+version = "1.0.0"
+defaultTargets = ["M0"]
+
+[[lean_lib]]
+name = "M0"
+srcDir = "lean"
+roots = ["Lemma1", "Lemma2", "Lemma3", "Lemma3_5", "Lemma4"]

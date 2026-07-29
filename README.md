@@ -1,5 +1,7 @@
 # M₀ — deterministic state semantics
 
+[![verify](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml/badge.svg)](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml)
+
 M₀ is a small formal model of *state that stays part of the protocol while the schedule does
 not*. It targets systems where a replayed run must produce byte-identical observable output —
 replicated state machines, deterministic simulations, matching engines, database kernels.
@@ -46,12 +48,29 @@ axiom footprint as documented, witness Phase A agreeing 100/100. See
 ## Layout
 
 ```
+lakefile.toml, lean-toolchain
+          Lake package pinned to Lean 4.31.0
+scripts/  verify.py — the single command CI and humans both run
 docs/     STATE_OF_PROJECT v5.1 (full research log, RU), recovery notes
 lean/     the mechanization, Lemma1 … Lemma4 (Lean 4.31, no dependencies)
 witness/  m0.py, the hostile differential witness
 paper/    write-up outline
 weave/    unrelated earlier project kept in this repo's history (see weave/README.md)
 ```
+
+## Quick start
+
+Lean 4.31.0 (installed automatically by `elan` from `lean-toolchain`) and Python 3.10+.
+
+```bash
+lake build              # elaborate all five Lean files
+python scripts/verify.py   # build + 0 sorry + axiom footprint + witness
+```
+
+`scripts/verify.py` is what CI runs; it prints `PASS` only if the build is clean, no source
+contains `sorry`, every headline theorem has exactly the axiom footprint documented in
+[lean/README.md](lean/README.md), and the witness reports `ALL CHECKS PASSED`. Add `--quick`
+for a smaller witness run, `--skip-witness` for the Lean side only.
 
 ## Running the witness
 
