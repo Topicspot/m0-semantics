@@ -50,8 +50,8 @@ First — a design argument rather than a theorem — X must be stated over the 
 rather than over the internal state. Requiring
 identical internal states rules out substrates that are perfectly acceptable in practice, for
 example one that keeps a scratch cell alive after a retry. Requiring only "the same final
-answer" is too weak: it says nothing about a system that emits along the way, which is exactly
-what a replayable service does.
+answer" is too weak: it says nothing about a system that emits along the way, which is what a
+replayable service does.
 
 The property has a name elsewhere. In language-based security it is *observational
 determinism*: the attacker-visible behaviour of a concurrent program must not vary with the
@@ -85,8 +85,9 @@ The reference semantics is the sequential fold:
 Seq(P, J) = fold over J of "run the body of t against the current state"
 ```
 
-with a fresh local environment per transaction. This is `runSeq` in the mechanization, and
-Lemma 1 shows that the relational and executable versions agree and that the result is unique.
+with a fresh local environment per transaction. Throughout, this sequential fold is written
+`Seq(P, J)`; it is `runSeq` in the mechanization, and Lemma 1 shows that the relational and
+executable versions agree and that the result is unique.
 
 The parallel discipline has three rules:
 
@@ -224,9 +225,8 @@ sequential fold of its own projection (`refines`). Then:
   (`implements_M0_execute_eq`).
 
 In one sentence: for a closed, order-sensitive semantics with journal-ordered commit and
-snapshot validation, the observable behaviour is a function of the journal and the semantic
-state alone, and not of the execution schedule, for any substrate satisfying two interface
-laws.
+snapshot validation, the Observable is a function of the journal and the semantic state alone
+— not of the execution schedule — for any substrate satisfying two interface laws.
 
 **L5, failure refinement.** The interface of L4 assumes total substrates: `forced` demands
 that a legal run consume the journal exactly. Real substrates crash. L5 weakens `forced` to a
@@ -242,9 +242,9 @@ lost. Concretely:
   longer run factors exactly through the shorter run's result: the continuation equals the
   sequential fold of the remaining journal from the crash state. Runs of different machines
   never diverge under partial failure — they only stop. The factorization clause is a strong
-  form of recovery independence: any correct continuation is forced to factor through the
-  crash state and the sequential semantics of the remainder, independently of the pre-crash
-  schedule and even of which machine ran before the crash.
+  form of recovery independence. Any correct continuation is forced to factor through the
+  crash state and the sequential semantics of the remainder — independently of the pre-crash
+  schedule, and even of which machine ran before the crash.
 - `fail_observable_prefix`: crash-observable safety — the observable of any legal run is a
   prefix of `Seq(P, J)`'s. A crash may truncate output; it can never fabricate an observation
   that no sequential prefix would have produced.
@@ -273,7 +273,7 @@ The failure model is deliberately minimal: **crash-stop between commits**. A sub
 halt at any point between transactions; commits are atomic with respect to crashes (the
 negative suite checks that a torn commit is caught). What L5 does *not* model: resumption of a
 crashed run as one continued execution of one machine (recovery is an implementation and
-liveness concern, kept outside X exactly as fairness was in L2), and any constraint on *where*
+liveness concern, kept outside X just as fairness was in L2), and any constraint on *where*
 a substrate may crash — every prefix is admissible. The theorem is about what a crashed run
 may have observed, not about what happens next.
 
@@ -302,7 +302,7 @@ definitions rather than against the Lean text:
   transactions, or at a wave barrier), and every crashed run is checked against the four L5
   laws — the projection is a prefix of the journal, the result equals `Seq` of the consumed
   prefix, the emit stream is a prefix of the reference (no fabricated observations), and the
-  sequential fold of the remainder resumed from the crash state lands exactly on `Seq(P, J)`.
+  sequential fold of the remainder, resumed from the crash state, lands on `Seq(P, J)`.
 - **The negative suite** breaks the substrates on purpose. Three structural breakages, commits
   out of journal order, an attempt counter leaked into the output, and two conflicting
   transactions fused into one wave, must be caught in 100% of cases, and so must the two crash breakages: a fabricated
@@ -378,7 +378,7 @@ Stated deliberately, because the value of the artifact depends on its boundary b
 The natural next layer is **cost semantics**: attaching work to a run so that partitions and
 schedules can be compared rather than merely declared equivalent. That brings in conflict
 graphs, granularity as a formal parameter rather than an experimental observation, and a
-performance model of the two substrates. Since it is a genuinely different pillar, it is
+performance model of the two substrates. Since it is a different pillar, it is
 developed on a separate branch, leaving the safety story of v1.0 as a fixed reference point.
 
 Beyond that: liveness and progress under contention; further weakenings of the interface,
