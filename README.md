@@ -1,5 +1,7 @@
 # M₀: deterministic state semantics
 
+**English** · [Русский](docs/README.ru.md) · [简体中文](docs/README.zh-CN.md) · [Español](docs/README.es.md) · [Português](docs/README.pt-BR.md)
+
 [![verify](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml/badge.svg)](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21680072.svg)](https://doi.org/10.5281/zenodo.21680072)
 
