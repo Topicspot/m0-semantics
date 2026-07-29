@@ -46,7 +46,7 @@ stream the *Observable*; it is an explicit projection of the result, not the int
 
 Two remarks, both of which turned out to matter more than expected.
 
-First — a design argument rather than a theorem — X must be stated over the Observable
+First (a design argument rather than a theorem): X must be stated over the Observable
 rather than over the internal state. Requiring
 identical internal states rules out substrates that are perfectly acceptable in practice, for
 example one that keeps a scratch cell alive after a retry. Requiring only "the same final
@@ -61,7 +61,7 @@ property. This work does not claim the property; it claims a criterion for when 
 transactional discipline satisfies it, and a transfer theorem between implementations.
 
 Second, "the same schedule" is not the right notion of sameness for schedules. Two runs may
-differ in every operational detail — abort counts, snapshot choices, worker assignment — and
+differ in every operational detail (abort counts, snapshot choices, worker assignment) and
 still be the same run semantically; conversely, two runs may happen to print the same output
 for different semantic reasons. Fusing these notions is what makes the folklore look like a
 list of unrelated rules. The model therefore needs a structural equivalence on schedules, not
@@ -104,7 +104,7 @@ A **schedule** is reified as a trace of events: `attempt t σ` for a speculative
 was discarded, `commit t σ` for a validated commit. The **semantic projection** `semProj` of a
 trace is the list of committed identifiers in commit order. It carries the commit order, the
 assignment of logical time, and the journal that was consumed (`sem_forced`). It does not
-carry abort counts, snapshot choices, worker allocation, or timing — and "does not carry" is
+carry abort counts, snapshot choices, worker allocation, or timing, and "does not carry" is
 witnessed, not asserted: `abort_count_artifact` exhibits two legal runs of one `(P, J)` that
 differ in an abort and agree in everything semantic. Two schedules are **semantically equivalent**,
 written `S₁ ≈_J S₂`, when their semantic projections are equal.
@@ -122,7 +122,7 @@ The five results form a ladder; each rung quantifies over strictly more than the
                   │
                   ▼
             boundary of safe observations        L3   any oracle over (journal,
-            (preservation + counterexample)           logical time) — and no more
+            (preservation + counterexample)           logical time), and no more
                   │
                   ▼
             semantic ⊊ observable ⊊ coincidence  L3.5 any legal trace
@@ -225,8 +225,8 @@ sequential fold of its own projection (`refines`). Then:
   (`implements_M0_execute_eq`).
 
 In one sentence: for a closed, order-sensitive semantics with journal-ordered commit and
-snapshot validation, the Observable is a function of the journal and the semantic state alone
-— not of the execution schedule — for any substrate satisfying two interface laws.
+snapshot validation, the Observable is a function of the journal and the semantic state alone,
+not of the execution schedule, for any substrate satisfying two interface laws.
 
 **L5, failure refinement.** The interface of L4 assumes total substrates: `forced` demands
 that a legal run consume the journal exactly. Real substrates crash. L5 weakens `forced` to a
@@ -234,26 +234,26 @@ that a legal run consume the journal exactly. Real substrates crash. L5 weakens 
 exact: equality of observables becomes *prefix order* of observables, and nothing else is
 lost. Concretely:
 
-- `seq_out_prefix`: the reference fold is prefix-monotone — consuming a prefix of the journal
+- `seq_out_prefix`: the reference fold is prefix-monotone: consuming a prefix of the journal
   emits a prefix of the reference observable. No machine is mentioned; this is why crashes can
   only truncate.
 - `fail_substrate_independence`: for any two fail-sound substrates started identically on the
   same journal, projection-prefix order implies prefix order of the observables, *and* the
   longer run factors exactly through the shorter run's result: the continuation equals the
   sequential fold of the remaining journal from the crash state. Runs of different machines
-  never diverge under partial failure — they only stop. The factorization clause is a strong
+  never diverge under partial failure; they only stop. The factorization clause is a strong
   form of recovery independence. Any correct continuation is forced to factor through the
-  crash state and the sequential semantics of the remainder — independently of the pre-crash
+  crash state and the sequential semantics of the remainder, independently of the pre-crash
   schedule, and even of which machine ran before the crash.
-- `fail_observable_prefix`: crash-observable safety — the observable of any legal run is a
+- `fail_observable_prefix`: crash-observable safety: the observable of any legal run is a
   prefix of `Seq(P, J)`'s. A crash may truncate output; it can never fabricate an observation
   that no sequential prefix would have produced.
 - Conservativity: every sound substrate is fail-sound with the degenerate suffix
   (`SoundSubstrate.toFail`), and L4's conclusion is re-derived through the weaker interface
   (`substrate_independence_of_fail`). L4 is literally the total fragment of L5; no v1.0
   statement changed.
-- Instance and strictness: the optimistic trace machine with one new legal event — halting
-  mid-journal (`CrashRun`) — is fail-sound and strictly extends substrate 1
+- Instance and strictness: the optimistic trace machine with one new legal event, halting
+  mid-journal (`CrashRun`), is fail-sound and strictly extends substrate 1
   (`runTrace_is_crashRun`). The witness `crash_prefix_witness` shows in one statement that the
   weakening is strict (the L4 `forced` law fails), that observable equality is genuinely lost,
   and that the prefix law is exactly what survives.
@@ -274,7 +274,7 @@ halt at any point between transactions; commits are atomic with respect to crash
 negative suite checks that a torn commit is caught). What L5 does *not* model: resumption of a
 crashed run as one continued execution of one machine (recovery is an implementation and
 liveness concern, kept outside X just as fairness was in L2), and any constraint on *where*
-a substrate may crash — every prefix is admissible. The theorem is about what a crashed run
+a substrate may crash: every prefix is admissible. The theorem is about what a crashed run
 may have observed, not about what happens next.
 
 ## 5. Mechanization and witness
@@ -300,14 +300,14 @@ definitions rather than against the Lean text:
   of the admissibility rules, and cross-substrate agreement.
 - **Phase D** is the experimental face of L5: both machines halt at random points (between
   transactions, or at a wave barrier), and every crashed run is checked against the four L5
-  laws — the projection is a prefix of the journal, the result equals `Seq` of the consumed
+  laws: the projection is a prefix of the journal, the result equals `Seq` of the consumed
   prefix, the emit stream is a prefix of the reference (no fabricated observations), and the
   sequential fold of the remainder, resumed from the crash state, lands on `Seq(P, J)`.
 - **The negative suite** breaks the substrates on purpose. Three structural breakages, commits
   out of journal order, an attempt counter leaked into the output, and two conflicting
   transactions fused into one wave, must be caught in 100% of cases, and so must the two crash breakages: a fabricated
-  post-halt emit (in its sneaky variant it emits the *correct* next reference value, which
-  the prefix law alone cannot see — only refinement against the consumed prefix can) and a
+  post-halt emit (the fabricated value can be the *correct* next reference value, which
+  the prefix law alone cannot see; only refinement against the consumed prefix can) and a
   torn commit. Five further breakages,
   including missing validation, a race without the wave-entry barrier, and leaks of the worker
   position or the wave index into emitted values, are caught only part of the time, which is
@@ -382,7 +382,7 @@ performance model of the two substrates. Since it is a different pillar, it is
 developed on a separate branch, leaving the safety story of v1.0 as a fixed reference point.
 
 Beyond that: liveness and progress under contention; further weakenings of the interface,
-of which L5's prefix law is the first — the natural next one is a projection coarser than a
+of which L5's prefix law is the first; the natural next one is a projection coarser than a
 list (quotient journals), with L5 as the template for "weaker law, exactly which weaker
 conclusion"; an explicit recovery construction on top of the L5 factorization; and mapping the
 boundary theorem onto an existing language's effect system to see how many of its primitives

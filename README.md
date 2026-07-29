@@ -1,9 +1,9 @@
-# M₀ — deterministic state semantics
+# M₀: deterministic state semantics
 
 [![verify](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml/badge.svg)](https://github.com/Topicspot/m0-semantics/actions/workflows/verify.yml)
 
 M₀ is a small formal model of *state that stays part of the protocol while the schedule does
-not*. It targets systems where a replayed run must produce byte-identical observable output —
+not*. It targets systems where a replayed run must produce byte-identical observable output:
 replicated state machines, deterministic simulations, matching engines, database kernels.
 
 The property under study, informally:
@@ -34,7 +34,7 @@ reproducible artifact: everything claimed below is re-checked by CI on every com
 | witness | `m0.py`: differential witness, 8 negative substrates, coverage gate, JSON manifest | green |
 
 Mechanized in Lean 4.31.0 with `0 sorry`; the only axioms used are `propext` and `Quot.sound`,
-and `substrate_independence` — the main theorem — uses none. The full axiom footprint is
+and `substrate_independence`, the main theorem, uses none. The full axiom footprint is
 compared against the documented one by `scripts/verify.py`, so a proof that silently starts
 depending on something new fails CI.
 
@@ -73,7 +73,7 @@ Why this direction and not cost semantics first: [`docs/NEXT_STAGE.md`](docs/NEX
 ```
 lakefile.toml, lean-toolchain
           Lake package pinned to Lean 4.31.0
-scripts/  verify.py — the single command CI and humans both run
+scripts/  verify.py, the single command CI and humans both run
 docs/     STATE_OF_PROJECT v5.1 (full research log, RU), recovery notes
 lean/     the mechanization, Lemma1 … Lemma5 (Lean 4.31, no dependencies)
 witness/  m0.py, the hostile differential witness
@@ -110,8 +110,8 @@ python witness/m0.py neg               # intentionally broken substrates must be
 Expected: Phases B and D report `0 discrepancies`; the negative suite catches the three
 structural breakages (`wrong_order`, `schedule_counter`, `wave_illegal_partition`) and the two
 crash breakages (`crash_emit_after_halt`, `crash_torn_commit`) in 100% of cases, and
-the five observable-level ones — missing validation, a barrier-free race, emits in worker
-order, a worker-id leak, a partition-id leak — only part of the time. That is not a bug but
+the five observable-level ones (missing validation, a barrier-free race, emits in worker
+order, a worker-id leak, a partition-id leak) only part of the time. That is not a bug but
 the empirical face of observable coincidence from L3.5. Each run also reports structural
 coverage and replay statistics, and fails if a required coverage bucket was never reached; see
 [witness/README.md](witness/README.md).
@@ -124,7 +124,7 @@ coverage and replay statistics, and fails if a required coverage bucket was neve
 
 `m0.py` is a falsification / validation witness, not a second proof. Agreement over millions
 of cases raises confidence. A discrepancy is a counterexample to the implementation or to the
-transcription of the specification — never to the theorem.
+transcription of the specification, never to the theorem.
 
 ## License
 

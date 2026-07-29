@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-verify.py — one command that either says PASS or explains why not.
+verify.py - one command that either says PASS or explains why not.
 
 Checks, in order:
 
-  1. `lake build` — all Lean files elaborate under the pinned toolchain.
+  1. `lake build` - all Lean files elaborate under the pinned toolchain.
   2. no `sorry` in the sources, and no `sorryAx` in the axiom footprint of any
      checked theorem (the second check is the one that cannot be faked).
   3. the axiom footprint of every headline theorem equals what the project
-     claims in lean/README.md — a proof that silently starts depending on a
+     claims in lean/README.md - a proof that silently starts depending on a
      new axiom is a regression, not a detail.
   4. `witness/m0.py`, the differential witness, unless --skip-witness. It writes
      witness-manifest.json (seeds, counts, coverage, statistics) next to the repo
@@ -185,7 +185,7 @@ def main() -> int:
         for f in fails:
             print(f"  - {f}")
         return 1
-    print("PASS — build clean, 0 sorry, axiom footprint as documented"
+    print("PASS - build clean, 0 sorry, axiom footprint as documented"
           + ("" if args.skip_witness else ", witness green"))
     return 0
 
